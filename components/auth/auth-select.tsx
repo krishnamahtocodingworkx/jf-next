@@ -14,7 +14,15 @@ type AuthSelectProps = {
   error?: string;
 };
 
-export function AuthSelect({ name, placeholder, value, options, onChange, onBlur, error }: AuthSelectProps) {
+export function AuthSelect({
+  name,
+  placeholder,
+  value,
+  options,
+  onChange,
+  onBlur,
+  error,
+}: AuthSelectProps) {
   const [isActive, setIsActive] = useState(false);
 
   return (
@@ -53,9 +61,16 @@ export function AuthSelect({ name, placeholder, value, options, onChange, onBlur
           />
         </span>
       </div>
-      <div className="flex h-4 w-full shrink-0 items-start pt-0.5" aria-live="polite">
+      <div
+        className="flex h-4 w-full shrink-0 items-start pt-0.5"
+        aria-live="polite"
+      >
         {error ? (
-          <p className="line-clamp-1 w-full text-[11px] font-light leading-tight text-red-500" title={error} role="alert">
+          <p
+            className="line-clamp-1 w-full text-[11px] font-light leading-tight text-red-500"
+            title={error}
+            role="alert"
+          >
             {error}
           </p>
         ) : null}
