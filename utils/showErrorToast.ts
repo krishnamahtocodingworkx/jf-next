@@ -1,28 +1,32 @@
 import SHOW_ERROR_TOAST from "@/utils/showToast";
-import { getErrorMessage } from "@/utils/commonFunctions";
+import { extractApiErrorMessage } from "@/utils/commonFunctions";
 import { AUTH_STRINGS } from "@/utils/strings";
 
-export function showErrorToast(error: unknown, fallbackMessage = "Something went wrong") {
-  const message = getErrorMessage(error, fallbackMessage);
-  console.log("[auth] error toast", message, error);
-  SHOW_ERROR_TOAST(message);
+/** Error toast only when a message is extracted (API / serialized / Axios / Error). */
+export function showErrorToast(error: unknown) {
+  const message = extractApiErrorMessage(error);
+  if (message) {
+    console.log("[auth] error toast", message, error);
+    SHOW_ERROR_TOAST(message);
+  } else if (process.env.NODE_ENV === "development") {
+    console.log("[toast] no extractable error message; toast skipped", error);
+  }
 }
 
-/** Prefer these from Redux thunks so fallback strings stay in one place. */
 export function notifyLoginApiError(error: unknown) {
-  showErrorToast(error, AUTH_STRINGS.login.errorFallback);
+  showErrorToast(error);
 }
 
 export function notifyRegisterApiError(error: unknown) {
-  showErrorToast(error, AUTH_STRINGS.register.errorFallback);
+  showErrorToast(error);
 }
 
 export function notifyForgotPasswordApiError(error: unknown) {
-  showErrorToast(error, AUTH_STRINGS.forgotPassword.errorFallback);
+  showErrorToast(error);
 }
 
 export function notifyResetPasswordApiError(error: unknown) {
-  showErrorToast(error, AUTH_STRINGS.recoveryPassword.errorFallback);
+  showErrorToast(error);
 }
 
 export function notifyRecoveryLinkInvalid() {

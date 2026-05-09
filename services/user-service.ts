@@ -1,7 +1,7 @@
 import { api } from "@/services/api";
 import { ENDPOINTS } from "@/utils/endpoints";
 import { auth } from "@/lib/firebase";
-import { normalizeCountryOptions } from "@/utils/commonFunctions";
+import { attachBackendSuccessMessage, normalizeCountryOptions } from "@/utils/commonFunctions";
 import {
   signInWithCustomToken,
   signInWithEmailAndPassword,
@@ -41,8 +41,10 @@ class UserService {
 
     console.log("[auth] login API + firebase token success", payload.email);
 
+    const withBackendMessage = attachBackendSuccessMessage(data, loginData);
+
     return {
-      ...loginData,
+      ...withBackendMessage,
       idToken,
     };
   }
@@ -56,7 +58,9 @@ class UserService {
 
     console.log("[auth] register API + email verification sent", payload.email);
 
-    return data?.data ?? data;
+    const inner = data?.data ?? data;
+
+    return attachBackendSuccessMessage(data, inner);
   }
 
   async getCountries() {

@@ -8,11 +8,6 @@ import {
   nameRegExp,
 } from "@/utils/validation";
 
-/**
- * Yup schemas as factories (same pattern as purpose-codes-platform-user-panel `schema.ts`).
- * Cached instances exported as `loginSchema`, etc. for Formik.
- */
-
 export const LoginSchema = () =>
   Yup.object().shape({
     email: Yup.string()

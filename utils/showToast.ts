@@ -1,10 +1,6 @@
 import { toast } from "react-hot-toast";
 import { extractSuccessMessage } from "@/utils/commonFunctions";
 
-/**
- * Toast helpers aligned with purpose-codes-platform-user-panel `showToast.ts`.
- */
-
 const SHOW_ERROR_TOAST = (message = "OOPS! something went wrong") => {
   toast.dismiss();
   message = message.toString();
@@ -29,13 +25,13 @@ export const SUCCESS_TOAST = (message = "Successful") => {
 
 export default SHOW_ERROR_TOAST;
 
-/** Success toast when the API payload includes a message field (used from Redux thunks). */
+/** Success toast when the API payload includes a backend message field (used from Redux thunks). */
 export function notifyApiSuccessToast(payload: unknown) {
   const msg = extractSuccessMessage(payload);
   if (msg) {
     console.log("[auth] success toast", msg);
     SUCCESS_TOAST(msg);
-  } else {
-    console.log("[toast] no API message field in response", payload);
+  } else if (process.env.NODE_ENV === "development") {
+    console.log("[toast] no backend message in response; toast skipped", payload);
   }
 }

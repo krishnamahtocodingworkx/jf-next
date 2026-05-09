@@ -28,7 +28,7 @@ export const loginUser = createAsyncThunk(
       if (!interceptorHandledNetworkOrTimeout(error)) {
         notifyLoginApiError(error);
       }
-      const message = extractApiErrorMessage(error) ?? "Login failed";
+      const message = extractApiErrorMessage(error) ?? "";
       return rejectWithValue(message);
     }
   },
@@ -62,7 +62,7 @@ export const registerUser = createAsyncThunk(
       if (!interceptorHandledNetworkOrTimeout(error)) {
         notifyRegisterApiError(error);
       }
-      const message = extractApiErrorMessage(error) ?? "Registration failed";
+      const message = extractApiErrorMessage(error) ?? "";
       return rejectWithValue(message);
     }
   },
@@ -79,7 +79,7 @@ export const forgotPassword = createAsyncThunk(
       if (!interceptorHandledNetworkOrTimeout(error)) {
         notifyForgotPasswordApiError(error);
       }
-      const message = extractApiErrorMessage(error) ?? "Failed to send reset instructions";
+      const message = extractApiErrorMessage(error) ?? "";
       return rejectWithValue(message);
     }
   },
@@ -96,7 +96,7 @@ export const resetPassword = createAsyncThunk(
       if (!interceptorHandledNetworkOrTimeout(error)) {
         notifyResetPasswordApiError(error);
       }
-      const message = extractApiErrorMessage(error) ?? "Failed to reset password";
+      const message = extractApiErrorMessage(error) ?? "";
       return rejectWithValue(message);
     }
   },

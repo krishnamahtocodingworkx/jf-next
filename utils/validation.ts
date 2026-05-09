@@ -1,7 +1,3 @@
-/**
- * Regex and shared validation messages (aligned with purpose-codes-platform-user-panel patterns).
- */
-
 export const isValid = (name: string) => /^[a-zA-Z ]+$/.test(name);
 
 export const passwordError =

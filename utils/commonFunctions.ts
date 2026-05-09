@@ -49,6 +49,19 @@ export function parseBackendMessageBody(data: unknown): string | undefined {
   return undefined;
 }
 
+/** Merges backend success text from the full JSON envelope into the inner payload (unwraps `data` + top-level `message`). */
+export function attachBackendSuccessMessage<T extends Record<string, unknown>>(
+  envelope: unknown,
+  innerPayload: T,
+): T {
+  if (!isRecord(innerPayload)) return innerPayload;
+  const fromInner = parseBackendMessageBody(innerPayload);
+  const fromEnvelope = parseBackendMessageBody(envelope);
+  const text = fromInner ?? fromEnvelope;
+  if (!text) return { ...innerPayload };
+  return { ...innerPayload, message: text };
+}
+
 /** Shape returned by `utils/service` axios response interceptor on HTTP failures. */
 export function isSerializedInterceptorError(
   error: unknown,
@@ -73,6 +86,10 @@ export function extractApiErrorMessage(error: unknown): string | undefined {
     if (fromBody) return fromBody;
     if (typeof body === "string" && body.trim()) return body.trim();
     return undefined;
+  }
+  if (isRecord(error)) {
+    const fromBody = parseBackendMessageBody(error);
+    if (fromBody) return fromBody;
   }
   if (error instanceof Error && error.message) {
     return error.message;

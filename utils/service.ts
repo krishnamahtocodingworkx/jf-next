@@ -4,6 +4,7 @@ import axios, {
   AxiosResponse,
   InternalAxiosRequestConfig,
 } from "axios";
+import { parseBackendMessageBody } from "@/utils/commonFunctions";
 import SHOW_ERROR_TOAST, { SHOW_INTERNET_TOAST } from "@/utils/showToast";
 import { storage } from "@/lib/storage";
 import { ENDPOINTS } from "@/utils/endpoints";
@@ -72,14 +73,12 @@ const createAxiosInstance = (
   instance.interceptors.response.use(
     (response: AxiosResponse) => response,
     (error): Promise<ErrorResponse> => {
-      const axiosError = error as AxiosError<{
-        message?: string;
-        error?: { message?: string };
-      }>;
+      const axiosError = error as AxiosError;
 
+      const body = axiosError.response?.data as unknown;
       const message =
-        axiosError.response?.data?.error?.message ??
-        axiosError.response?.data?.message ??
+        parseBackendMessageBody(body) ??
+        (typeof body === "string" && body.trim() ? body.trim() : undefined) ??
         axiosError.response?.statusText ??
         axiosError.message ??
         SOMETHING_WENT_WRONG;

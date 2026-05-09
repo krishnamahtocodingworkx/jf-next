@@ -4,6 +4,8 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { logout } from "@/redux/user/user-slice";
+import { LOGOUT_TOAST } from "@/utils/showToast";
+import { AUTH_STRINGS } from "@/utils/strings";
 import { routes } from "@/utils/routes";
 
 export default function AppHomePage() {
@@ -30,6 +32,8 @@ export default function AppHomePage() {
           onClick={() => {
             console.log("[auth] Logout clicked");
             dispatch(logout());
+            LOGOUT_TOAST(AUTH_STRINGS.logout.successToast);
+              console.log("[auth] logout success toast shown");
             router.push(routes.LOGIN);
           }}
           className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"

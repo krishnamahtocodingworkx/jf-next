@@ -90,7 +90,7 @@ const userSlice = createSlice({
     });
     builder.addCase(loginUser.rejected, (state, action) => {
       state.loading = false;
-      state.error = (action.payload as string) || "Login failed";
+      state.error = (action.payload as string) || "";
     });
 
     builder.addCase(registerUser.pending, (state) => {
@@ -102,7 +102,7 @@ const userSlice = createSlice({
     });
     builder.addCase(registerUser.rejected, (state, action) => {
       state.loading = false;
-      state.error = (action.payload as string) || "Registration failed";
+      state.error = (action.payload as string) || "";
     });
 
     builder.addCase(forgotPassword.pending, (state) => {
@@ -114,7 +114,7 @@ const userSlice = createSlice({
     });
     builder.addCase(forgotPassword.rejected, (state, action) => {
       state.loading = false;
-      state.error = (action.payload as string) || "Failed to send reset instructions";
+      state.error = (action.payload as string) || "";
     });
 
     builder.addCase(resetPassword.pending, (state) => {
@@ -126,7 +126,7 @@ const userSlice = createSlice({
     });
     builder.addCase(resetPassword.rejected, (state, action) => {
       state.loading = false;
-      state.error = (action.payload as string) || "Failed to reset password";
+      state.error = (action.payload as string) || "";
     });
   },
 });
