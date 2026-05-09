@@ -37,7 +37,12 @@ export function AuthInput({
           value={value}
           onChange={onChange}
           onBlur={onBlur}
-          className="h-12 w-full rounded-lg border border-slate-200 bg-white px-4 pr-11 text-slate-800 outline-none ring-teal-500 transition placeholder:text-slate-400 focus:ring-2"
+          aria-invalid={Boolean(error)}
+          className={`h-12 w-full rounded-lg border bg-white px-4 pr-11 text-slate-800 outline-none transition placeholder:text-slate-400 focus:ring-2 ${
+            error
+              ? "border-red-200 focus:border-red-200 focus:ring-red-200/40"
+              : "border-slate-200 focus:ring-teal-500"
+          }`}
         />
         {isPasswordField ? (
           <button
@@ -50,7 +55,13 @@ export function AuthInput({
           </button>
         ) : null}
       </div>
-      {error ? <p className="mt-1 text-sm text-red-600">{error}</p> : null}
+      <div className="flex h-4 w-full shrink-0 items-start pt-0.5" aria-live="polite">
+        {error ? (
+          <p className="line-clamp-1 w-full text-[11px] font-light leading-tight text-red-500" title={error} role="alert">
+            {error}
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }

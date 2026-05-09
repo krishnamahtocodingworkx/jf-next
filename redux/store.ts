@@ -1,16 +1,9 @@
 import { combineReducers, configureStore } from "@reduxjs/toolkit";
 import { persistReducer, persistStore } from "redux-persist";
-import { logger } from "redux-logger";
-import {
-  FLUSH,
-  PAUSE,
-  PERSIST,
-  PURGE,
-  REGISTER,
-  REHYDRATE,
-} from "redux-persist";
 import createWebStorage from "redux-persist/lib/storage/createWebStorage";
+import { createAppMiddleware } from "@/redux/middleware";
 import userReducer from "@/redux/user/user-slice";
+import type { UserState } from "@/redux/user/user-types";
 
 const createNoopStorage = () => ({
   getItem(_key: string) {
@@ -41,15 +34,12 @@ const persistedReducer = persistReducer(persistConfig, rootReducer);
 
 export const store = configureStore({
   reducer: persistedReducer,
-  middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware({
-      serializableCheck: {
-        ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
-      },
-    }).concat(logger),
+  middleware: (getDefaultMiddleware) => createAppMiddleware(getDefaultMiddleware),
 });
 
 export const persistor = persistStore(store);
 
-export type RootState = ReturnType<typeof store.getState>;
+export type RootState = {
+  user: UserState;
+};
 export type AppDispatch = typeof store.dispatch;

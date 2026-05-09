@@ -10,8 +10,7 @@ import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { loginUser } from "@/redux/user/user-thunks";
 import { LOGIN_INITIAL_VALUES } from "@/utils/initialValues";
 import { AUTH_STRINGS } from "@/utils/strings";
-import { showToast } from "@/utils/showToast";
-import { showErrorToast } from "@/utils/showErrorToast";
+import { visibleFormikFieldError } from "@/utils/commonFunctions";
 import { loginSchema } from "@/utils/validationSchema";
 
 export default function LoginPage() {
@@ -26,14 +25,14 @@ export default function LoginPage() {
       <Formik
         initialValues={LOGIN_INITIAL_VALUES}
         validationSchema={loginSchema}
+        validateOnMount={false}
         onSubmit={async (values) => {
           try {
             await dispatch(loginUser(values)).unwrap();
             console.log("[auth] Login success", values.email);
-            showToast(AUTH_STRINGS.login.success);
             router.push(routes.APP_HOME);
-          } catch (error) {
-            showErrorToast(error, AUTH_STRINGS.login.errorFallback);
+          } catch {
+            /* Toasts shown in loginUser thunk */
           }
         }}
       >
@@ -45,7 +44,7 @@ export default function LoginPage() {
               value={formik.values.email}
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
-              error={formik.touched.email ? formik.errors.email : undefined}
+              error={visibleFormikFieldError(formik.touched.email, formik.submitCount, formik.errors.email)}
             />
             <AuthInput
               name="password"
@@ -54,7 +53,7 @@ export default function LoginPage() {
               value={formik.values.password}
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
-              error={formik.touched.password ? formik.errors.password : undefined}
+              error={visibleFormikFieldError(formik.touched.password, formik.submitCount, formik.errors.password)}
             />
             <AuthSubmitButton
               label={AUTH_STRINGS.login.submit}

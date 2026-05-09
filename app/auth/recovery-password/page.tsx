@@ -10,8 +10,8 @@ import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { resetPassword } from "@/redux/user/user-thunks";
 import { RECOVERY_PASSWORD_INITIAL_VALUES } from "@/utils/initialValues";
 import { AUTH_STRINGS } from "@/utils/strings";
-import { showToast } from "@/utils/showToast";
-import { showErrorToast } from "@/utils/showErrorToast";
+import { notifyRecoveryLinkInvalid } from "@/utils/showErrorToast";
+import { visibleFormikFieldError } from "@/utils/commonFunctions";
 import { recoveryPasswordSchema } from "@/utils/validationSchema";
 
 export default function RecoveryPasswordPage() {
@@ -28,18 +28,18 @@ export default function RecoveryPasswordPage() {
       <Formik
         initialValues={RECOVERY_PASSWORD_INITIAL_VALUES}
         validationSchema={recoveryPasswordSchema}
+        validateOnMount={false}
         onSubmit={async (values) => {
           if (!code) {
-            showErrorToast(AUTH_STRINGS.recoveryPassword.invalidLink);
+            notifyRecoveryLinkInvalid();
             return;
           }
           try {
             await dispatch(resetPassword({ code, password: values.password })).unwrap();
             console.log("[auth] Password reset success", code);
-            showToast(AUTH_STRINGS.recoveryPassword.success);
             router.push(routes.LOGIN);
-          } catch (error) {
-            showErrorToast(error, AUTH_STRINGS.recoveryPassword.errorFallback);
+          } catch {
+            /* Toasts shown in resetPassword thunk */
           }
         }}
       >
@@ -52,7 +52,7 @@ export default function RecoveryPasswordPage() {
               value={formik.values.password}
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
-              error={formik.touched.password ? formik.errors.password : undefined}
+              error={visibleFormikFieldError(formik.touched.password, formik.submitCount, formik.errors.password)}
             />
             <AuthInput
               name="confirmPassword"
@@ -61,7 +61,11 @@ export default function RecoveryPasswordPage() {
               value={formik.values.confirmPassword}
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
-              error={formik.touched.confirmPassword ? formik.errors.confirmPassword : undefined}
+              error={visibleFormikFieldError(
+                formik.touched.confirmPassword,
+                formik.submitCount,
+                formik.errors.confirmPassword,
+              )}
             />
             <AuthSubmitButton
               label={AUTH_STRINGS.recoveryPassword.submit}

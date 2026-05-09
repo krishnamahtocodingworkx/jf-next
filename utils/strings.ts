@@ -6,7 +6,6 @@ export const AUTH_STRINGS = {
     forgotPassword: "Forgot password?",
     needAccount: "Need an account?",
     createAccount: "Create account",
-    success: "Login successful",
     errorFallback: "Login failed",
   },
   register: {
@@ -15,7 +14,6 @@ export const AUTH_STRINGS = {
     submitLoading: "Creating account...",
     hasAccount: "Already have an account?",
     login: "Login",
-    successToast: "Registration completed.",
     successTitle: "Registration completed successfully!",
     successBodyPrefix: "Please check",
     successBodySuffix: "to verify your account. Once verified, come back and login.",
@@ -27,7 +25,6 @@ export const AUTH_STRINGS = {
     submit: "Send me instructions",
     submitLoading: "Sending...",
     backToLogin: "Back to login",
-    success: "Reset instructions sent.",
     errorFallback: "Failed to send instructions",
   },
   recoveryPassword: {
@@ -36,7 +33,6 @@ export const AUTH_STRINGS = {
     submitLoading: "Saving...",
     backToLogin: "Back to login",
     invalidLink: "Invalid or expired reset link",
-    success: "Password changed successfully",
     errorFallback: "Password reset failed",
   },
 } as const;

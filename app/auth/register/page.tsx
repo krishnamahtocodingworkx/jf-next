@@ -15,8 +15,7 @@ import { userService } from "@/services/user-service";
 import { REGISTER_INITIAL_VALUES } from "@/utils/initialValues";
 import { AUTH_STRINGS } from "@/utils/strings";
 import { AUTH_CONSTANTS } from "@/utils/constants";
-import { showToast } from "@/utils/showToast";
-import { showErrorToast } from "@/utils/showErrorToast";
+import { visibleFormikFieldError } from "@/utils/commonFunctions";
 import { registerSchema } from "@/utils/validationSchema";
 
 export default function RegisterPage() {
@@ -70,6 +69,7 @@ export default function RegisterPage() {
       <Formik
         initialValues={REGISTER_INITIAL_VALUES}
         validationSchema={registerSchema}
+        validateOnMount={false}
         onSubmit={async (values) => {
           try {
             await dispatch(
@@ -91,22 +91,25 @@ export default function RegisterPage() {
             console.log("[auth] Register success", values.email);
             setSuccessEmail(values.email);
             setIsSuccess(true);
-            showToast(AUTH_STRINGS.register.successToast);
-          } catch (error) {
-            showErrorToast(error, AUTH_STRINGS.register.errorFallback);
+          } catch {
+            /* Toasts shown in registerUser thunk */
           }
         }}
       >
         {(formik) => (
           <form onSubmit={formik.handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 items-start gap-3">
               <AuthInput
                 name="firstName"
                 placeholder="First Name"
                 value={formik.values.firstName}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
-                error={formik.touched.firstName ? formik.errors.firstName : undefined}
+                error={visibleFormikFieldError(
+                  formik.touched.firstName,
+                  formik.submitCount,
+                  formik.errors.firstName,
+                )}
               />
               <AuthInput
                 name="lastName"
@@ -114,17 +117,17 @@ export default function RegisterPage() {
                 value={formik.values.lastName}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
-                error={formik.touched.lastName ? formik.errors.lastName : undefined}
+                error={visibleFormikFieldError(formik.touched.lastName, formik.submitCount, formik.errors.lastName)}
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 items-start gap-3">
               <AuthInput
                 name="company"
                 placeholder="Company"
                 value={formik.values.company}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
-                error={formik.touched.company ? formik.errors.company : undefined}
+                error={visibleFormikFieldError(formik.touched.company, formik.submitCount, formik.errors.company)}
               />
               <AuthSelect
                 name="companyType"
@@ -133,17 +136,25 @@ export default function RegisterPage() {
                 options={companyTypes.map((option) => ({ value: option.id, label: option.title }))}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
-                error={formik.touched.companyType ? formik.errors.companyType : undefined}
+                error={visibleFormikFieldError(
+                  formik.touched.companyType,
+                  formik.submitCount,
+                  formik.errors.companyType,
+                )}
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 items-start gap-3">
               <AuthInput
                 name="phoneNumber"
                 placeholder="Phone Number"
                 value={formik.values.phoneNumber}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
-                error={formik.touched.phoneNumber ? formik.errors.phoneNumber : undefined}
+                error={visibleFormikFieldError(
+                  formik.touched.phoneNumber,
+                  formik.submitCount,
+                  formik.errors.phoneNumber,
+                )}
               />
               <AuthInput
                 name="jobTitle"
@@ -151,17 +162,17 @@ export default function RegisterPage() {
                 value={formik.values.jobTitle}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
-                error={formik.touched.jobTitle ? formik.errors.jobTitle : undefined}
+                error={visibleFormikFieldError(formik.touched.jobTitle, formik.submitCount, formik.errors.jobTitle)}
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 items-start gap-3">
               <AuthInput
                 name="city"
                 placeholder="City"
                 value={formik.values.city}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
-                error={formik.touched.city ? formik.errors.city : undefined}
+                error={visibleFormikFieldError(formik.touched.city, formik.submitCount, formik.errors.city)}
               />
               <AuthInput
                 name="state"
@@ -169,10 +180,10 @@ export default function RegisterPage() {
                 value={formik.values.state}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
-                error={formik.touched.state ? formik.errors.state : undefined}
+                error={visibleFormikFieldError(formik.touched.state, formik.submitCount, formik.errors.state)}
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 items-start gap-3">
               <AuthSelect
                 name="country"
                 placeholder="Select Country"
@@ -180,7 +191,7 @@ export default function RegisterPage() {
                 options={countryOptions.map((option) => ({ value: option.id || option.name, label: option.name }))}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
-                error={formik.touched.country ? formik.errors.country : undefined}
+                error={visibleFormikFieldError(formik.touched.country, formik.submitCount, formik.errors.country)}
               />
               <AuthInput
                 name="email"
@@ -188,27 +199,33 @@ export default function RegisterPage() {
                 value={formik.values.email}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
-                error={formik.touched.email ? formik.errors.email : undefined}
+                error={visibleFormikFieldError(formik.touched.email, formik.submitCount, formik.errors.email)}
               />
             </div>
-            <AuthInput
-              name="password"
-              type="password"
-              placeholder="Password"
-              value={formik.values.password}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.password ? formik.errors.password : undefined}
-            />
-            <AuthInput
-              name="confirmPassword"
-              type="password"
-              placeholder="Confirm Password"
-              value={formik.values.confirmPassword}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.confirmPassword ? formik.errors.confirmPassword : undefined}
-            />
+            <div className="grid grid-cols-2 items-start gap-3">
+              <AuthInput
+                name="password"
+                type="password"
+                placeholder="Password"
+                value={formik.values.password}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={visibleFormikFieldError(formik.touched.password, formik.submitCount, formik.errors.password)}
+              />
+              <AuthInput
+                name="confirmPassword"
+                type="password"
+                placeholder="Confirm Password"
+                value={formik.values.confirmPassword}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={visibleFormikFieldError(
+                  formik.touched.confirmPassword,
+                  formik.submitCount,
+                  formik.errors.confirmPassword,
+                )}
+              />
+            </div>
             <AuthSubmitButton
               label={AUTH_STRINGS.register.submit}
               loadingLabel={AUTH_STRINGS.register.submitLoading}

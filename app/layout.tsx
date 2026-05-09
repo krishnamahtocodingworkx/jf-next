@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "JourneyFoods",
-  description: "JourneyFoods auth flow clone in Next.js",
+  title: "JourneyFoods Dashboard - Journey AI",
+  description: "Intelligent food product development platform",
   icons: {
     icon: "/favicon.png",
     shortcut: "/favicon.png",

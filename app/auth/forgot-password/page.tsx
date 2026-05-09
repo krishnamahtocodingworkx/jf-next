@@ -9,8 +9,7 @@ import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { forgotPassword } from "@/redux/user/user-thunks";
 import { FORGOT_PASSWORD_INITIAL_VALUES } from "@/utils/initialValues";
 import { AUTH_STRINGS } from "@/utils/strings";
-import { showToast } from "@/utils/showToast";
-import { showErrorToast } from "@/utils/showErrorToast";
+import { visibleFormikFieldError } from "@/utils/commonFunctions";
 import { forgotPasswordSchema } from "@/utils/validationSchema";
 
 export default function ForgotPasswordPage() {
@@ -25,13 +24,13 @@ export default function ForgotPasswordPage() {
       <Formik
         initialValues={FORGOT_PASSWORD_INITIAL_VALUES}
         validationSchema={forgotPasswordSchema}
+        validateOnMount={false}
         onSubmit={async (values) => {
           try {
             await dispatch(forgotPassword(values.email)).unwrap();
             console.log("[auth] Forgot password requested", values.email);
-            showToast(AUTH_STRINGS.forgotPassword.success);
-          } catch (error) {
-            showErrorToast(error, AUTH_STRINGS.forgotPassword.errorFallback);
+          } catch {
+            /* Toasts shown in forgotPassword thunk */
           }
         }}
       >
@@ -43,7 +42,7 @@ export default function ForgotPasswordPage() {
               value={formik.values.email}
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
-              error={formik.touched.email ? formik.errors.email : undefined}
+              error={visibleFormikFieldError(formik.touched.email, formik.submitCount, formik.errors.email)}
             />
             <AuthSubmitButton
               label={AUTH_STRINGS.forgotPassword.submit}
