@@ -10,7 +10,7 @@ import { setLimit, setProductClass, setProductStatus, setSearch } from "@/redux/
 import { getProducts } from "@/redux/products/productsThunk";
 import { AppDispatch, RootState } from "@/redux/store";
 import { normalizeProduct } from "@/utils/commonFunctions";
-import { ChevronDown, ChevronRight, Filter, LayoutGrid, List, Package, Search, Zap } from "lucide-react";
+import { ChevronDown, ChevronRight, Filter, LayoutGrid, List, Package, Plus, Search, Zap } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -185,6 +185,14 @@ export default function ProductsClient() {
                         >
                             <Filter className="h-3.5 w-3.5" />
                             Filters
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => { }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors"
+                        >
+                            <Plus className="h-4 w-4" />
+                            Add
                         </button>
 
                         <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden">

@@ -11,7 +11,7 @@ type Props = {
 export default function ProductActiveStat({ activeCount, total, averageNutritionScore }: Props) {
     return (
         <div
-            className="rounded-xl p-5 text-white relative overflow-hidden h-full flex flex-col"
+            className="rounded-xl p-5 text-white relative overflow-hidden flex flex-col"
             style={{ background: "linear-gradient(135deg, #22c55e 0%, #059669 100%)" }}
         >
             <div className="absolute top-4 right-4 opacity-20">

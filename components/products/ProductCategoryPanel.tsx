@@ -16,7 +16,7 @@ export default function ProductCategoryPanel({ categories }: Props) {
 
     return (
         <div
-            className="rounded-xl p-5 text-white relative overflow-hidden h-full flex flex-col"
+            className="rounded-xl p-5 text-white relative overflow-hidden flex flex-col"
             style={{ background: "linear-gradient(135deg, #334155 0%, #0f172a 100%)" }}
         >
             <div className="absolute top-4 right-4 opacity-20">
