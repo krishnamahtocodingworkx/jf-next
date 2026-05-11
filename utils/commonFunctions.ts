@@ -1,6 +1,7 @@
 import axios from "axios";
 import type { SelectOption } from "@/utils/model";
 import { Ingredient } from "@/components/ingredients/types";
+import { Product } from "@/components/products/types";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -165,3 +166,23 @@ export const normalizeIngredient = (item: any, index: number): Ingredient => ({
   productsCount: Number(item?.productsCount ?? 0),
   alert: Boolean(item?.alert),
 });
+
+export const normalizeProduct = (item: any, index: number): Product => {
+  const productClass = typeof item?.productClass === "string" ? item.productClass : "";
+  const primaryClass = productClass
+    .split(",")
+    .map((part: string) => part.trim())
+    .filter(Boolean)[0] || "Uncategorized";
+
+  return {
+    id: String(item?._id ?? item?.id ?? index),
+    name: typeof item?.name === "string" && item.name.trim() ? item.name.trim() : `Product ${index + 1}`,
+    productClass,
+    primaryClass,
+    status: item?.productStatus === false ? "inactive" : "active",
+    cost: Number(item?.cost ?? 0),
+    markup: Number(item?.markup ?? 0),
+    costMargin: Number(item?.costMargin ?? 0),
+    nutritionScore: Number(item?.nutritionScore ?? 0),
+  };
+};

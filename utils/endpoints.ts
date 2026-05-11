@@ -15,5 +15,8 @@ export const ENDPOINTS = {
   INGREDIENTS: {
     GET: "/api/v1/ingredient/get-ingredient-list",
     ADD: "/api/v1/ingredient/add-ingredient"
+  },
+  PRODUCTS: {
+    GET: "/api/v1/product/get-product-list",
   }
 } as const;
