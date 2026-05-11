@@ -388,6 +388,10 @@ import {
 } from "lucide-react"
 
 import { useRouter } from "next/navigation"
+import { logout } from "@/redux/user/user-slice"
+import { AppDispatch, RootState } from "@/redux/store"
+import { useDispatch, useSelector } from "react-redux"
+import Image from "next/image"
 
 const brandsData = [
     {
@@ -405,7 +409,9 @@ const brandsData = [
 ]
 
 export default function Navbar() {
+    const { details } = useSelector((state: RootState) => state.user);
     const router = useRouter()
+    const dispatch: AppDispatch = useDispatch();
 
     const [isSupplierMode, setIsSupplierMode] = useState(false)
 
@@ -430,6 +436,8 @@ export default function Navbar() {
 
     const handleLogout = () => {
         console.log("logout")
+        dispatch(logout());
+        router.push("/auth/login")
     }
 
     const handleSearch = (e: React.FormEvent) => {
@@ -442,10 +450,12 @@ export default function Navbar() {
         <div className="flex items-center justify-between px-6 py-3 border-b border-slate-100 bg-white">
             {/* Logo */}
             <div className="flex items-center shrink-0">
-                <img
+                <Image
                     src="/journey-foods-logo.svg"
                     alt="JourneyFoods"
                     className="h-8 w-auto"
+                    width={100}
+                    height={32}
                 />
             </div>
 
@@ -510,8 +520,8 @@ export default function Navbar() {
                                             setBrandsDropdownOpen(false)
                                         }}
                                         className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-colors ${selectedBrandFilter === "all"
-                                                ? "bg-teal-50 text-teal-700"
-                                                : "text-slate-700 hover:bg-slate-50"
+                                            ? "bg-teal-50 text-teal-700"
+                                            : "text-slate-700 hover:bg-slate-50"
                                             }`}
                                     >
                                         <span>All brands</span>
@@ -533,8 +543,8 @@ export default function Navbar() {
                                                 setBrandsDropdownOpen(false)
                                             }}
                                             className={`w-full flex items-center justify-between px-4 py-2.5 text-sm transition-colors ${selectedBrandFilter === brand.id
-                                                    ? "bg-teal-50 text-teal-700"
-                                                    : "text-slate-700 hover:bg-slate-50"
+                                                ? "bg-teal-50 text-teal-700"
+                                                : "text-slate-700 hover:bg-slate-50"
                                                 }`}
                                         >
                                             <span className="flex items-center gap-3">
@@ -648,7 +658,7 @@ export default function Navbar() {
                     >
                         <div className="h-8 w-8 rounded-full overflow-hidden">
                             <img
-                                src="/images/riana-profile.png"
+                                src={details?.profilePicture || "/assets/user.png"}
                                 alt="Profile"
                                 className="h-full w-full object-cover"
                             />
@@ -656,7 +666,7 @@ export default function Navbar() {
 
                         <div className="hidden md:block text-left">
                             <p className="text-sm font-medium text-slate-700">
-                                Riana Lynn
+                                {details?.firstName ? details.firstName + " " + details.lastName : "N/A"}
                             </p>
 
                             <p className="text-xs text-slate-500">

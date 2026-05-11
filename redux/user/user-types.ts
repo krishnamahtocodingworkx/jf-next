@@ -1,11 +1,26 @@
 export type AuthState = "signed_out" | "signed_in";
 
 export interface AuthUser {
-  id: string;
+  _id: string;
   email: string;
-  firstName?: string;
-  lastName?: string;
-  role?: string;
+  firstName: string;
+  lastName: string;
+  jobTitle: string;
+  city: string;
+  state: string;
+  country: string;
+  phoneNumber: string;
+  companyType: string;
+  password: string;
+  role: string;
+  firebaseUserId: string;
+  isActive: boolean;
+  disable: boolean;
+  notify: string;
+  walkthrough: boolean;
+  createdAt: string;
+  updatedAt: string;
+  profilePicture: string;
 }
 
 export interface UserState {
@@ -14,7 +29,7 @@ export interface UserState {
   accessToken: string;
   refreshToken: string;
   idToken: string;
-  user: AuthUser | null;
+  details: AuthUser | null;
   loading: boolean;
   error: string;
 }

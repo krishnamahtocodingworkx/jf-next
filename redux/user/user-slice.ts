@@ -1,65 +1,21 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { jwtDecode } from "jwt-decode";
 import { storage } from "@/lib/storage";
-import { forgotPassword, loginUser, registerUser, resetPassword } from "@/redux/user/user-thunks";
+import { forgotPassword, manualLogin, registerUser, resetPassword } from "@/redux/user/user-thunks";
 import type { UserState } from "@/redux/user/user-types";
 
-type DecodedToken = {
-  app_user_id?: string;
-  user_id?: string;
-  email?: string;
-  role?: string;
-};
-
-function getInitialState(): UserState {
-  const idToken = storage.getItem("idToken") || "";
-
-  if (!idToken) {
-    return {
-      isLoggedIn: false,
-      authState: "signed_out",
-      accessToken: "",
-      refreshToken: "",
-      idToken: "",
-      user: null,
-      loading: false,
-      error: "",
-    };
-  }
-
-  try {
-    const decoded = jwtDecode<DecodedToken>(idToken);
-    return {
-      isLoggedIn: true,
-      authState: "signed_in",
-      accessToken: storage.getItem("access_token") || "",
-      refreshToken: storage.getItem("refresh_token") || "",
-      idToken,
-      user: {
-        id: decoded.app_user_id || decoded.user_id || "mock-user",
-        email: decoded.email || "",
-        role: decoded.role || "",
-      },
-      loading: false,
-      error: "",
-    };
-  } catch {
-    return {
-      isLoggedIn: false,
-      authState: "signed_out",
-      accessToken: "",
-      refreshToken: "",
-      idToken: "",
-      user: null,
-      loading: false,
-      error: "",
-    };
-  }
+const initialState: UserState = {
+  isLoggedIn: false,
+  authState: "signed_out",
+  accessToken: "",
+  refreshToken: "",
+  idToken: "",
+  details: null,
+  loading: false,
+  error: "",
 }
-
 const userSlice = createSlice({
   name: "user",
-  initialState: getInitialState(),
+  initialState: initialState,
   reducers: {
     logout(state) {
       storage.removeItem("access_token");
@@ -70,25 +26,25 @@ const userSlice = createSlice({
       state.accessToken = "";
       state.refreshToken = "";
       state.idToken = "";
-      state.user = null;
+      state.details = null;
       state.error = "";
     },
   },
   extraReducers: (builder) => {
-    builder.addCase(loginUser.pending, (state) => {
+    builder.addCase(manualLogin.pending, (state) => {
       state.loading = true;
       state.error = "";
     });
-    builder.addCase(loginUser.fulfilled, (state, action) => {
+    builder.addCase(manualLogin.fulfilled, (state, action) => {
       state.loading = false;
       state.isLoggedIn = true;
       state.authState = "signed_in";
       state.accessToken = action.payload.accessToken || "";
       state.refreshToken = action.payload.refreshToken || "";
       state.idToken = action.payload.idToken || "";
-      state.user = action.payload.user || null;
+      state.details = action.payload.user || null;
     });
-    builder.addCase(loginUser.rejected, (state, action) => {
+    builder.addCase(manualLogin.rejected, (state, action) => {
       state.loading = false;
       state.error = (action.payload as string) || "";
     });
