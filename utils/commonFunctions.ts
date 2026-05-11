@@ -1,5 +1,6 @@
 import axios from "axios";
 import type { SelectOption } from "@/utils/model";
+import { Ingredient } from "@/components/ingredients/types";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -147,3 +148,20 @@ export function normalizeCountryOptions(
     }))
     .sort((a, b) => a.label.localeCompare(b.label));
 }
+
+
+export const normalizeIngredient = (item: any, index: number): Ingredient => ({
+  id: String(item?._id ?? item?.id ?? index),
+  name: item?.name ?? item?.ingredientName ?? `Ingredient ${index + 1}`,
+  subCategory: item?.subCategory ?? item?.subcategory ?? "General",
+  supplier: item?.supplier ?? item?.supplierName ?? "Unknown supplier",
+  category: item?.category ?? "All",
+  status: String(item?.status ?? "active").toLowerCase(),
+  form: item?.form ?? "Powder",
+  pricePerKg: item?.pricePerKg ? String(item.pricePerKg) : "N/A",
+  nutritionScore: Number(item?.nutritionScore ?? 0),
+  sustainabilityScore: Number(item?.sustainabilityScore ?? 0),
+  costScore: Number(item?.costScore ?? 0),
+  productsCount: Number(item?.productsCount ?? 0),
+  alert: Boolean(item?.alert),
+});

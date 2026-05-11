@@ -14,7 +14,7 @@ export default function Layout({
                 <NavigationTabs />
             </header>
 
-            <main className="p-6">
+            <main className="px-6 py-2 bg-[#F9FAFC]">
                 {children}
             </main>
         </>

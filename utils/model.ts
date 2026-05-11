@@ -31,3 +31,10 @@ export type SelectOption = {
   value: string;
   label: string;
 };
+export interface ApiResponse<T = any> {
+  message: string;
+  data: T;
+  code: number;
+  status: string;
+  timestamp: string | number;
+}

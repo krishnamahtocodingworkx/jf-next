@@ -12,4 +12,8 @@ export const ENDPOINTS = {
   COUNTRY: {
     GET_ALL: "/api/v1/country/get-all-countries",
   },
+  INGREDIENTS: {
+    GET: "/api/v1/ingredient/get-ingredient-list",
+    ADD: "/api/v1/ingredient/add-ingredient"
+  }
 } as const;

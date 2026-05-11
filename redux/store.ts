@@ -3,6 +3,7 @@ import { persistReducer, persistStore } from "redux-persist";
 import createWebStorage from "redux-persist/lib/storage/createWebStorage";
 import { createAppMiddleware } from "@/redux/middleware";
 import userReducer from "@/redux/user/user-slice";
+import ingredientReducer, { ingredientsStateType } from "@/redux/ingredients/ingredientsSlice";
 import type { UserState } from "@/redux/user/user-types";
 
 const createNoopStorage = () => ({
@@ -21,6 +22,7 @@ const storage = typeof window !== "undefined" ? createWebStorage("local") : crea
 
 const rootReducer = combineReducers({
   user: userReducer,
+  ingredients: ingredientReducer,
 });
 
 const persistConfig = {
@@ -41,5 +43,6 @@ export const persistor = persistStore(store);
 
 export type RootState = {
   user: UserState;
+  ingredients: ingredientsStateType;
 };
 export type AppDispatch = typeof store.dispatch;
