@@ -82,7 +82,7 @@ export default function IngredientGridCard({ ingredient, onView }: IngredientGri
 
             <div className="flex items-center justify-between pt-3 border-t border-slate-100">
                 <div className="flex items-center gap-1 text-sm font-semibold text-slate-700">
-                    <DollarSign className="h-3.5 w-3.5 text-slate-400" />$
+                    <DollarSign className="h-3.5 w-3.5 text-slate-400" />
                     {ingredient.price > 0 ? ingredient.price.toFixed(2) : "—"}
                     <span className="text-xs text-slate-400 font-normal">/{ingredient.unit}</span>
                 </div>
