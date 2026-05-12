@@ -17,7 +17,7 @@ export const fetchIngredientsPage = createAsyncThunk(
         const root = getState() as IngredientSliceSubset;
         const { pagination, ui } = root.ingredient;
         const page = Math.max(1, pagination.page || 1);
-        const size = Math.max(1, pagination.size || 12);
+        const size = Math.max(1, pagination.size || 10);
         const search = ui.searchApplied.trim();
         if (search) {
             return ingredientService.searchIngredients(search, page, size);

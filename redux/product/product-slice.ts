@@ -49,7 +49,7 @@ const initialState: ProductState = {
         page: 1,
         totalPages: 1,
         nextHit: false,
-        limit: 12,
+        limit: 10,
         loadStatus: "idle",
         search: "",
         filterA: "all",
@@ -108,6 +108,14 @@ const productSlice = createSlice({
         },
         setCatalogPage: (state, action: PayloadAction<number>) => {
             state.catalog.page = Math.max(1, action.payload);
+        },
+        setCatalogLimit: (state, action: PayloadAction<number>) => {
+            const allowed = [10, 20, 50, 100] as const;
+            const next = allowed.includes(action.payload as (typeof allowed)[number])
+                ? action.payload
+                : state.catalog.limit;
+            state.catalog.limit = next;
+            state.catalog.page = 1;
         },
         setCatalogDisplayMode: (state, action: PayloadAction<"grid" | "list">) => {
             state.catalog.displayMode = action.payload;
@@ -168,6 +176,7 @@ export const {
     setCatalogFilterA,
     setCatalogFilterB,
     setCatalogPage,
+    setCatalogLimit,
     setCatalogDisplayMode,
     clearProductDetail,
 } = productSlice.actions;

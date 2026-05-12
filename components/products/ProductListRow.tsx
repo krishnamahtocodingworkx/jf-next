@@ -1,7 +1,7 @@
 "use client";
 
 import { Package } from "lucide-react";
-import ScoreRing from "@/components/products/score-ring";
+import ScoreRing from "@/components/products/ScoreRing";
 import type { IProductCatalogRow } from "@/interfaces/product";
 
 type ProductListRowProps = {

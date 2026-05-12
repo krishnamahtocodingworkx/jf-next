@@ -1,7 +1,7 @@
 "use client";
 
 import type { ButtonHTMLAttributes, ReactNode } from "react";
-import { CircularLoader } from "@/components/common/circular-loader";
+import { CircularLoader } from "@/components/common/CircularLoader";
 
 type LoadingButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   isLoading?: boolean;

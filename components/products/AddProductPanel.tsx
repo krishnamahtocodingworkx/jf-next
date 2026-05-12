@@ -315,7 +315,7 @@ export default function AddProductPanel({ open, onClose, onCreated }: AddProduct
                             <option value="">
                                 {addForm.status === "loading"
                                     ? "Loading manufacturers…"
-                                    : "Select manufacturer (optional)"}
+                                    : "Select manufacturer"}
                             </option>
                             {addForm.manufacturers.map((o) => (
                                 <option key={o.value} value={o.value}>

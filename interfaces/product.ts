@@ -1,4 +1,4 @@
-/** Minimal product shape for search + listing (parity with JourneyFoodsDashboardUpgraded). */
+/** Minimal product shape for search + listing . */
 export interface IProduct {
     id: string;
     name?: string;

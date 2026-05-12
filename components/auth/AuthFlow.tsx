@@ -1,8 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { LoginPage } from "./login-page"
-import { RegistrationFlow } from "./registration-flow"
+import { LoginPage } from "./LoginPage"
+import { RegistrationFlow } from "./RegistrationFlow"
 
 export type AuthView = "login" | "register"
 

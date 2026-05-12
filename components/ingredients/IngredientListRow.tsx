@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, ChevronRight, Leaf, Star } from "lucide-react";
+import { ChevronRight, Leaf, Star } from "lucide-react";
 import type { IIngredientCatalogRow } from "@/interfaces/ingredient";
 
 type IngredientListRowProps = {
@@ -36,7 +36,9 @@ export default function IngredientListRow({ ingredient, onView }: IngredientList
                     {ingredient.starred && (
                         <Star className="h-3 w-3 text-yellow-400 fill-yellow-400 shrink-0" />
                     )}
+                    {/* Mock: flagged supplier-audit icon — hidden per product request
                     {ingredient.flagged && <AlertTriangle className="h-3 w-3 text-red-500 shrink-0" />}
+                    */}
                 </div>
                 <p className="text-xs text-slate-500">
                     {ingredient.category} · {ingredient.form} · {ingredient.origin}

@@ -1,4 +1,4 @@
-import PublicGuard from "@/components/auth/public-guard";
+import PublicGuard from "@/components/auth/PublicGuard";
 
 export default function AuthLayout({
   children,

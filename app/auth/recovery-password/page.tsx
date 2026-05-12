@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Formik } from "formik";
-import { AuthInput } from "@/components/auth/auth-input";
-import { AuthSubmitButton } from "@/components/auth/auth-submit-button";
+import { AuthInput } from "@/components/auth/AuthInput";
+import { AuthSubmitButton } from "@/components/auth/AuthSubmitButton";
 import { routes } from "@/utils/routes";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { resetPassword } from "@/redux/user/user-thunks";

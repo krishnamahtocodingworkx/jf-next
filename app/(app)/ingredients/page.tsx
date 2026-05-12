@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
     Bell,
     ChevronDown,
@@ -23,19 +24,20 @@ import {
     setIngredientDisplayMode,
     setIngredientFormFilter,
     setIngredientPage,
+    setIngredientPageSize,
     setIngredientSearch,
     setIngredientStatusFilter,
     type IngredientCategoryFilter,
     type IngredientFormFilter,
     type IngredientStatusFilter,
 } from "@/redux/ingredient/ingredient-slice";
-import IngredientGridCard from "@/components/ingredients/ingredient-grid-card";
-import IngredientListRow from "@/components/ingredients/ingredient-list-row";
-import IngredientAlertsPanel from "@/components/ingredients/ingredient-alerts-panel";
-import AddIngredientPanel from "@/components/ingredients/add-ingredient-panel";
-import IngredientDetailDrawer from "@/components/ingredients/ingredient-detail-drawer";
-import CatalogShimmer from "@/components/common/catalog-shimmer";
-import type { IIngredientCatalogRow } from "@/interfaces/ingredient";
+import IngredientGridCard from "@/components/ingredients/IngredientGridCard";
+import IngredientListRow from "@/components/ingredients/IngredientListRow";
+import IngredientAlertsPanel from "@/components/ingredients/IngredientAlertsPanel";
+import AddIngredientPanel from "@/components/ingredients/AddIngredientPanel";
+import CatalogShimmer from "@/components/common/CatalogShimmer";
+
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;
 
 const STATUS_PILLS: Array<{ id: IngredientStatusFilter; label: string }> = [
     { id: "all", label: "All" },
@@ -63,6 +65,7 @@ const CATEGORY_PILLS: Array<{ id: IngredientCategoryFilter; label: string }> = [
 ];
 
 export default function IngredientsPage() {
+    const router = useRouter();
     const dispatch = useAppDispatch();
     const ingredient = useAppSelector((s) => s.ingredient);
     const rows = useAppSelector(selectIngredientCatalogRows);
@@ -70,10 +73,6 @@ export default function IngredientsPage() {
     const [localSearch, setLocalSearch] = useState(ingredient.ui.searchApplied);
     const [showFilters, setShowFilters] = useState(false);
     const [showAddPanel, setShowAddPanel] = useState(false);
-    const [selectedIngredient, setSelectedIngredient] = useState<IIngredientCatalogRow | null>(
-        null,
-    );
-
     useEffect(() => {
         console.log("[IngredientsPage] fetch trigger", {
             page: ingredient.pagination.page,
@@ -359,7 +358,7 @@ export default function IngredientsPage() {
                                         ingredient={row}
                                         onView={() => {
                                             console.log("[IngredientsPage] view", row.id);
-                                            setSelectedIngredient(row);
+                                            router.push(`/ingredients/${encodeURIComponent(row.id)}`);
                                         }}
                                     />
                                 ))}
@@ -377,7 +376,7 @@ export default function IngredientsPage() {
                                         ingredient={row}
                                         onView={() => {
                                             console.log("[IngredientsPage] view", row.id);
-                                            setSelectedIngredient(row);
+                                            router.push(`/ingredients/${encodeURIComponent(row.id)}`);
                                         }}
                                     />
                                 ))}
@@ -385,32 +384,56 @@ export default function IngredientsPage() {
                         )}
                 </div>
 
-                {totalPages > 1 && (
-                    <div className="p-4 border-t border-slate-100 flex items-center justify-between">
+                {totalCount > 0 && (
+                    <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <p className="text-sm text-slate-500">
                             Page {ingredient.pagination.page} of {totalPages}
+                            <span className="text-slate-400"> · </span>
+                            {totalCount} total
                         </p>
-                        <div className="flex items-center gap-1">
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    dispatch(setIngredientPage(ingredient.pagination.page - 1))
-                                }
-                                disabled={ingredient.pagination.page <= 1}
-                                className="flex items-center justify-center h-8 w-8 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                <ChevronLeft className="h-4 w-4" />
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    dispatch(setIngredientPage(ingredient.pagination.page + 1))
-                                }
-                                disabled={ingredient.pagination.page >= totalPages}
-                                className="flex items-center justify-center h-8 w-8 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                <ChevronRight className="h-4 w-4" />
-                            </button>
+                        <div className="flex flex-wrap items-center gap-3">
+                            <label className="flex items-center gap-2 text-sm text-slate-600">
+                                <span className="text-slate-500">Per page</span>
+                                <select
+                                    value={ingredient.pagination.size}
+                                    onChange={(e) =>
+                                        dispatch(setIngredientPageSize(Number(e.target.value)))
+                                    }
+                                    className="pl-2 pr-8 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                >
+                                    {PAGE_SIZE_OPTIONS.map((n) => (
+                                        <option key={n} value={n}>
+                                            {n}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                            <div className="flex items-center gap-1">
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        dispatch(
+                                            setIngredientPage(ingredient.pagination.page - 1),
+                                        )
+                                    }
+                                    disabled={ingredient.pagination.page <= 1}
+                                    className="flex items-center justify-center h-8 w-8 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        dispatch(
+                                            setIngredientPage(ingredient.pagination.page + 1),
+                                        )
+                                    }
+                                    disabled={ingredient.pagination.page >= totalPages}
+                                    className="flex items-center justify-center h-8 w-8 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <ChevronRight className="h-4 w-4" />
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -436,11 +459,6 @@ export default function IngredientsPage() {
                     console.log("[IngredientsPage] ingredient created, refetching");
                     dispatch(fetchIngredientsPage());
                 }}
-            />
-
-            <IngredientDetailDrawer
-                ingredient={selectedIngredient}
-                onClose={() => setSelectedIngredient(null)}
             />
         </div>
     );

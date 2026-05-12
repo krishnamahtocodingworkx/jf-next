@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import {
-    AlertTriangle,
     Apple,
     ArrowLeft,
     Award,
@@ -32,6 +31,8 @@ import type { IIngredientCatalogRow } from "@/interfaces/ingredient";
 type IngredientDetailDrawerProps = {
     ingredient: IIngredientCatalogRow | null;
     onClose: () => void;
+    /** When true, render as a normal scrollable page (not a fixed overlay). */
+    asPage?: boolean;
 };
 
 function seedFromId(id: string): number {
@@ -51,6 +52,7 @@ const countries = [
 export default function IngredientDetailDrawer({
     ingredient,
     onClose,
+    asPage = false,
 }: IngredientDetailDrawerProps) {
     const [selectedCountry, setSelectedCountry] = useState("US");
     const [nutritionExpanded, setNutritionExpanded] = useState(true);
@@ -78,14 +80,26 @@ export default function IngredientDetailDrawer({
           ? "active"
           : "concept";
     const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+    /* Mock: supplier audit copy — hidden per product request
     const alertText = ingredient.flagged ? "Supplier audit scheduled" : null;
+    */
     const trendUp = ingredient.trendPct > 0 && ingredient.trendPositive;
     const trendDown = ingredient.trendPct > 0 && !ingredient.trendPositive;
     const selectedCountryData = countries.find((c) => c.code === selectedCountry);
 
     return (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-white">
-            <div className="border-b border-slate-200 bg-white sticky top-0 z-10">
+        <div
+            className={
+                asPage
+                    ? "min-h-0 w-full bg-white"
+                    : "fixed inset-0 z-50 overflow-y-auto bg-white"
+            }
+        >
+            <div
+                className={`border-b border-slate-200 bg-white ${
+                    asPage ? "" : "sticky top-0 z-10"
+                }`}
+            >
                 <div className="px-6 py-4 max-w-7xl mx-auto">
                     <button
                         type="button"
@@ -144,7 +158,7 @@ export default function IngredientDetailDrawer({
                 </div>
             </div>
 
-            {alertText && (
+            {/* {alertText && (
                 <div className="max-w-7xl mx-auto px-6">
                     <div className="mt-4 flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
                         <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
@@ -154,7 +168,7 @@ export default function IngredientDetailDrawer({
                         </div>
                     </div>
                 </div>
-            )}
+            )} */}
 
             <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
                 <div className="space-y-6">
