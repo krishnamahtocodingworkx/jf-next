@@ -9,8 +9,8 @@ import {
   confirmPasswordReset,
   sendEmailVerification,
 } from "firebase/auth";
+import { notifyApiSuccessToast } from "@/utils/showToast";
 
-type LoginPayload = { email: string; password: string };
 type RegisterPayload = {
   firstName: string;
   lastName: string;
@@ -27,25 +27,58 @@ type RegisterPayload = {
 };
 
 class UserService {
-  async login(payload: LoginPayload) {
-    const { data } = await api.post(ENDPOINTS.AUTH.LOGIN, payload);
-    const loginData = data?.data ?? data;
-    const accessToken = loginData?.accessToken;
+  //  Step 1: Firebase login (check MFA)
+  async loginWithFirebase(email: string, password: string) {
+    try {
+      const res = await signInWithEmailAndPassword(auth, email, password);
 
-    if (!accessToken) {
-      throw new Error("Login response does not include access token");
+      return {
+        user: res.user,
+        mfaRequired: false
+      };
+    } catch (error: any) {
+      console.log("loginWithFirebase error:", error);
+
+      switch (error.code) {
+        case "auth/user-not-found":
+          throw new Error("User does not exist. Please register first.");
+
+        case "auth/wrong-password":
+          throw new Error("Incorrect password");
+
+        case "auth/invalid-email":
+          throw new Error("Invalid email address");
+
+        case "auth/too-many-requests":
+          throw new Error("Too many attempts. Try again later.");
+
+        case "auth/multi-factor-auth-required":
+          return {
+            mfaRequired: true,
+            resolver: error.resolver,
+            phoneNumber:
+              error?.customData?._tokenResponse?.mfaInfo?.[0]?.phoneInfo
+          };
+
+        default:
+          throw new Error(error?.message || "Something went wrong");
+      }
     }
+  }
 
-    const firebaseCredential = await signInWithCustomToken(auth, accessToken);
-    const idToken = await firebaseCredential.user.getIdToken();
-
-    console.log("[auth] login API + firebase token success", payload.email);
-
-    const withBackendMessage = attachBackendSuccessMessage(data, loginData);
-
+  //  Step 2: Backend login + Firebase custom token
+  async login(email: string, password: string) {
+    const { data } = await api.post(ENDPOINTS.AUTH.LOGIN, {
+      email,
+      password
+    });
+    const accessToken = data.data?.accessToken;
+    const res = await signInWithCustomToken(auth, accessToken);
+    const idToken = await res.user?.getIdToken();
+    notifyApiSuccessToast(data);
     return {
-      ...withBackendMessage,
-      idToken,
+      ...data.data,
+      idToken
     };
   }
 
