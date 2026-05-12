@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronDown, Package, Save, X } from "lucide-react";
+import { Package, Save, X } from "lucide-react";
 import { productService, buildCreateProductPayload } from "@/services/product-service";
 import { notifyApiSuccessToast } from "@/utils/showToast";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { fetchProductAddFormOptions } from "@/redux/product/product-thunks";
 import { getErrorMessage, isValidMongoObjectId } from "@/utils/commonFunctions";
+import { ChevronSelect } from "@/components/common/ChevronSelect";
 
 type AddProductPanelProps = {
     open: boolean;
@@ -174,11 +175,11 @@ export default function AddProductPanel({ open, onClose, onCreated }: AddProduct
                                 <label className="block text-sm font-medium text-slate-700 mb-1.5">
                                     Select Company
                                 </label>
-                                <select
+                                <ChevronSelect
                                     value={formData.company}
                                     onChange={(e) => updateField("company", e.target.value)}
                                     disabled={addForm.status === "loading"}
-                                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm disabled:opacity-60"
+                                    className="py-2.5"
                                 >
                                     <option value="">
                                         {addForm.status === "loading"
@@ -190,7 +191,7 @@ export default function AddProductPanel({ open, onClose, onCreated }: AddProduct
                                             {o.label}
                                         </option>
                                     ))}
-                                </select>
+                                </ChevronSelect>
                             </div>
 
                 <div className="grid grid-cols-3 gap-4">
@@ -198,45 +199,45 @@ export default function AddProductPanel({ open, onClose, onCreated }: AddProduct
                         <label className="block text-sm font-medium text-slate-700 mb-1.5">
                             Category
                         </label>
-                        <select
+                        <ChevronSelect
                             value={formData.category}
                             onChange={(e) => updateField("category", e.target.value)}
-                            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            className="py-2.5"
                         >
                             <option value="">Select Category</option>
                             <option value="Food">Food</option>
                             <option value="Beverages">Beverages</option>
                             <option value="Supplements">Supplements</option>
-                        </select>
+                        </ChevronSelect>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1.5">
                             Product Type
                         </label>
-                        <select
+                        <ChevronSelect
                             value={formData.productType}
                             onChange={(e) => updateField("productType", e.target.value)}
-                            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            className="py-2.5"
                         >
                             <option value="">Select Product Type</option>
                             <option value="Retail">Retail</option>
                             <option value="Concept">Concept</option>
-                        </select>
+                        </ChevronSelect>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1.5">
                             Subcategory
                         </label>
-                        <select
+                        <ChevronSelect
                             value={formData.subcategory}
                             onChange={(e) => updateField("subcategory", e.target.value)}
-                            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            className="py-2.5"
                         >
                             <option value="">Select Subcategory</option>
                             <option value="Condiments">Condiments</option>
                             <option value="Snacks">Snacks</option>
                             <option value="Frozen">Frozen</option>
-                        </select>
+                        </ChevronSelect>
                     </div>
                 </div>
 
@@ -269,24 +270,21 @@ export default function AddProductPanel({ open, onClose, onCreated }: AddProduct
                         <label className="block text-sm font-medium text-slate-700 mb-1.5">
                             Brand
                         </label>
-                        <div className="relative">
-                            <select
-                                value={formData.brand}
-                                onChange={(e) => updateField("brand", e.target.value)}
-                                disabled={addForm.status === "loading"}
-                                className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm appearance-none disabled:opacity-60"
-                            >
-                                <option value="">
-                                    {addForm.status === "loading" ? "Loading brands…" : "Select brand"}
+                        <ChevronSelect
+                            value={formData.brand}
+                            onChange={(e) => updateField("brand", e.target.value)}
+                            disabled={addForm.status === "loading"}
+                            className="py-2.5"
+                        >
+                            <option value="">
+                                {addForm.status === "loading" ? "Loading brands…" : "Select brand"}
+                            </option>
+                            {addForm.brands.map((o) => (
+                                <option key={o.value} value={o.value}>
+                                    {o.label}
                                 </option>
-                                {addForm.brands.map((o) => (
-                                    <option key={o.value} value={o.value}>
-                                        {o.label}
-                                    </option>
-                                ))}
-                            </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-                        </div>
+                            ))}
+                        </ChevronSelect>
                     </div>
                 </div>
 
@@ -306,11 +304,11 @@ export default function AddProductPanel({ open, onClose, onCreated }: AddProduct
                         <label className="block text-sm font-medium text-slate-700 mb-1.5">
                             Manufacturer
                         </label>
-                        <select
+                        <ChevronSelect
                             value={formData.manufacturer}
                             onChange={(e) => updateField("manufacturer", e.target.value)}
                             disabled={addForm.status === "loading"}
-                            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm disabled:opacity-60"
+                            className="py-2.5"
                         >
                             <option value="">
                                 {addForm.status === "loading"
@@ -322,7 +320,7 @@ export default function AddProductPanel({ open, onClose, onCreated }: AddProduct
                                     {o.label}
                                 </option>
                             ))}
-                        </select>
+                        </ChevronSelect>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1.5">
@@ -360,22 +358,24 @@ export default function AddProductPanel({ open, onClose, onCreated }: AddProduct
                                 onChange={(e) => updateField("servingSize", e.target.value)}
                                 className="flex-1 px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                             />
-                            <select
+                            <ChevronSelect
+                                wrapperClassName="w-20 shrink-0"
                                 value={formData.servingUnit}
                                 onChange={(e) => updateField("servingUnit", e.target.value)}
-                                className="w-16 px-2 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                className="py-2.5 pl-2 pr-8 text-sm"
+                                iconClassName="right-1.5 h-3 w-3"
                             >
                                 <option>g</option>
                                 <option>ml</option>
                                 <option>oz</option>
-                            </select>
+                            </ChevronSelect>
                         </div>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1.5">
                             Product Status
                         </label>
-                        <select
+                        <ChevronSelect
                             value={formData.status}
                             onChange={(e) =>
                                 updateField(
@@ -383,12 +383,12 @@ export default function AddProductPanel({ open, onClose, onCreated }: AddProduct
                                     e.target.value as AddProductFormData["status"],
                                 )
                             }
-                            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-slate-50"
+                            className="py-2.5 bg-slate-50"
                         >
                             <option value="active">Active</option>
                             <option value="concept">Concept</option>
                             <option value="discontinued">Discontinued</option>
-                        </select>
+                        </ChevronSelect>
                     </div>
                 </div>
 
@@ -495,47 +495,41 @@ export default function AddProductPanel({ open, onClose, onCreated }: AddProduct
                         <label className="block text-sm font-medium text-slate-700 mb-1.5">
                             Country
                         </label>
-                        <div className="relative">
-                            <select
-                                value={formData.country}
-                                onChange={(e) => updateField("country", e.target.value)}
-                                disabled={addForm.status === "loading"}
-                                className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm appearance-none disabled:opacity-60"
-                            >
-                                <option value="">
-                                    {addForm.status === "loading" ? "Loading countries…" : "Select country"}
+                        <ChevronSelect
+                            value={formData.country}
+                            onChange={(e) => updateField("country", e.target.value)}
+                            disabled={addForm.status === "loading"}
+                            className="py-2.5"
+                        >
+                            <option value="">
+                                {addForm.status === "loading" ? "Loading countries…" : "Select country"}
+                            </option>
+                            {addForm.countries.map((o) => (
+                                <option key={o.value} value={o.value}>
+                                    {o.label}
                                 </option>
-                                {addForm.countries.map((o) => (
-                                    <option key={o.value} value={o.value}>
-                                        {o.label}
-                                    </option>
-                                ))}
-                            </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-                        </div>
+                            ))}
+                        </ChevronSelect>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1.5">
                             Currency
                         </label>
-                        <div className="relative">
-                            <select
-                                value={formData.currency}
-                                onChange={(e) => updateField("currency", e.target.value)}
-                                disabled={addForm.status === "loading"}
-                                className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm appearance-none disabled:opacity-60"
-                            >
-                                <option value="">
-                                    {addForm.status === "loading" ? "Loading currencies…" : "Select currency"}
+                        <ChevronSelect
+                            value={formData.currency}
+                            onChange={(e) => updateField("currency", e.target.value)}
+                            disabled={addForm.status === "loading"}
+                            className="py-2.5"
+                        >
+                            <option value="">
+                                {addForm.status === "loading" ? "Loading currencies…" : "Select currency"}
+                            </option>
+                            {addForm.currencies.map((o) => (
+                                <option key={o.value} value={o.value}>
+                                    {o.label}
                                 </option>
-                                {addForm.currencies.map((o) => (
-                                    <option key={o.value} value={o.value}>
-                                        {o.label}
-                                    </option>
-                                ))}
-                            </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-                        </div>
+                            ))}
+                        </ChevronSelect>
                     </div>
                 </div>
 
@@ -560,16 +554,16 @@ export default function AddProductPanel({ open, onClose, onCreated }: AddProduct
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">
                         Product Objectives
                     </label>
-                    <select
+                    <ChevronSelect
                         value={formData.objectives}
                         onChange={(e) => updateField("objectives", e.target.value)}
-                        className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        className="py-2.5"
                     >
                         <option value="">Select Product Objectives</option>
                         <option value="low-sugar">Low Sugar</option>
                         <option value="high-protein">High Protein</option>
                         <option value="organic">Organic</option>
-                    </select>
+                    </ChevronSelect>
                 </div>
 
                 <div>

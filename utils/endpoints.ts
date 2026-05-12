@@ -40,6 +40,8 @@ export const ENDPOINTS = {
     MANUFACTURERS: `${API}/products/manufacturers/`,
     GET_PRODUCT_LIST: `${API}/product/get-product-list`,
     CREATE_PRODUCT: `${API}/product/create-product`,
+    /** v1 product metrics / overview (detail page). */
+    PRODUCT_DETAIL: (id: string) => `${API}/product/product-detail/${encodeURIComponent(id)}`,
     BY_ID: (id: string) => `${API}/user/products/${id}/`,
     GENERATE: `${API}/user/products/?generate_recommendation=true`,
     REMOVE: (id: string) => `${API}/user/products/${id}/`,

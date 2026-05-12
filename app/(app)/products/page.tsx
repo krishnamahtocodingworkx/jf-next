@@ -32,6 +32,7 @@ import ProductGridCard from "@/components/products/ProductGridCard";
 import ProductListRow from "@/components/products/ProductListRow";
 import AddProductPanel from "@/components/products/AddProductPanel";
 import CatalogShimmer from "@/components/common/CatalogShimmer";
+import { ChevronSelect } from "@/components/common/ChevronSelect";
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;
 
@@ -181,33 +182,37 @@ export default function ProductsPage() {
                             />
                         </div>
 
-                        <select
+                        <ChevronSelect
                             value={catalog.filterB}
                             onChange={(e) =>
                                 dispatch(setCatalogFilterB(e.target.value as CatalogFilterB))
                             }
-                            className="px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none bg-white"
+                            aria-label="Category filter"
+                            wrapperClassName="min-w-[8.5rem]"
+                            className="py-2"
                         >
                             {CATEGORY_PILLS.map((pill) => (
                                 <option key={pill.id} value={pill.id}>
                                     {pill.label}
                                 </option>
                             ))}
-                        </select>
+                        </ChevronSelect>
 
-                        <select
+                        <ChevronSelect
                             value={catalog.filterA}
                             onChange={(e) =>
                                 dispatch(setCatalogFilterA(e.target.value as CatalogFilterA))
                             }
-                            className="px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none bg-white"
+                            aria-label="Status filter"
+                            wrapperClassName="min-w-[7.5rem]"
+                            className="py-2"
                         >
                             {STATUS_PILLS.map((pill) => (
                                 <option key={pill.id} value={pill.id}>
                                     {pill.label}
                                 </option>
                             ))}
-                        </select>
+                        </ChevronSelect>
 
                         <button
                             type="button"
@@ -352,27 +357,30 @@ export default function ProductsPage() {
 
                 {totalCount > 0 && (
                     <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                        <p className="text-sm text-slate-500">
-                            Page {catalog.page} of {totalPages}
-                            <span className="text-slate-400"> · </span>
-                            {totalCount} total
-                        </p>
-                        <div className="flex flex-wrap items-center gap-3">
-                            <label className="flex items-center gap-2 text-sm text-slate-600">
-                                <span className="text-slate-500">Per page</span>
-                                <select
-                                    value={catalog.limit}
+                        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-500">
+                            <span className="tabular-nums whitespace-nowrap">
+                                Page {catalog.page} of {totalPages}
+                            </span>
+                            <span className="tabular-nums whitespace-nowrap">{totalCount} total</span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3 shrink-0">
+                            <label className="flex items-center gap-2 text-sm text-slate-600 whitespace-nowrap">
+                                <span className="text-slate-500 shrink-0">Per page</span>
+                                <ChevronSelect
+                                    value={String(catalog.limit)}
                                     onChange={(e) =>
                                         dispatch(setCatalogLimit(Number(e.target.value)))
                                     }
-                                    className="pl-2 pr-8 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                    aria-label="Items per page"
+                                    wrapperClassName="min-w-17"
+                                    className="py-1.5 pl-2.5 tabular-nums"
                                 >
                                     {PAGE_SIZE_OPTIONS.map((n) => (
                                         <option key={n} value={n}>
                                             {n}
                                         </option>
                                     ))}
-                                </select>
+                                </ChevronSelect>
                             </label>
                             <div className="flex items-center gap-1">
                                 <button

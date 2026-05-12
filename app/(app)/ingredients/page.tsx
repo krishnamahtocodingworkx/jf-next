@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
     Bell,
-    ChevronDown,
     ChevronLeft,
     ChevronRight,
     Filter,
@@ -36,6 +35,7 @@ import IngredientListRow from "@/components/ingredients/IngredientListRow";
 import IngredientAlertsPanel from "@/components/ingredients/IngredientAlertsPanel";
 import AddIngredientPanel from "@/components/ingredients/AddIngredientPanel";
 import CatalogShimmer from "@/components/common/CatalogShimmer";
+import { ChevronSelect } from "@/components/common/ChevronSelect";
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;
 
@@ -193,47 +193,45 @@ export default function IngredientsPage() {
                             />
                         </div>
 
-                        <div className="relative">
-                            <select
-                                value={ingredient.ui.statusFilter}
-                                onChange={(e) =>
-                                    dispatch(
-                                        setIngredientStatusFilter(
-                                            e.target.value as IngredientStatusFilter,
-                                        ),
-                                    )
-                                }
-                                className="pl-3 pr-7 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none appearance-none bg-white"
-                            >
-                                {STATUS_PILLS.map((pill) => (
-                                    <option key={pill.id} value={pill.id}>
-                                        {pill.label}
-                                    </option>
-                                ))}
-                            </select>
-                            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
-                        </div>
+                        <ChevronSelect
+                            value={ingredient.ui.statusFilter}
+                            onChange={(e) =>
+                                dispatch(
+                                    setIngredientStatusFilter(
+                                        e.target.value as IngredientStatusFilter,
+                                    ),
+                                )
+                            }
+                            aria-label="Status filter"
+                            wrapperClassName="min-w-[6.5rem]"
+                            className="py-1.5"
+                        >
+                            {STATUS_PILLS.map((pill) => (
+                                <option key={pill.id} value={pill.id}>
+                                    {pill.label}
+                                </option>
+                            ))}
+                        </ChevronSelect>
 
-                        <div className="relative">
-                            <select
-                                value={ingredient.ui.formFilter}
-                                onChange={(e) =>
-                                    dispatch(
-                                        setIngredientFormFilter(
-                                            e.target.value as IngredientFormFilter,
-                                        ),
-                                    )
-                                }
-                                className="pl-3 pr-7 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none appearance-none bg-white"
-                            >
-                                {FORM_PILLS.map((pill) => (
-                                    <option key={pill.id} value={pill.id}>
-                                        {pill.label}
-                                    </option>
-                                ))}
-                            </select>
-                            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
-                        </div>
+                        <ChevronSelect
+                            value={ingredient.ui.formFilter}
+                            onChange={(e) =>
+                                dispatch(
+                                    setIngredientFormFilter(
+                                        e.target.value as IngredientFormFilter,
+                                    ),
+                                )
+                            }
+                            aria-label="Form filter"
+                            wrapperClassName="min-w-[7.5rem]"
+                            className="py-1.5"
+                        >
+                            {FORM_PILLS.map((pill) => (
+                                <option key={pill.id} value={pill.id}>
+                                    {pill.label}
+                                </option>
+                            ))}
+                        </ChevronSelect>
 
                         <button
                             type="button"
@@ -386,27 +384,30 @@ export default function IngredientsPage() {
 
                 {totalCount > 0 && (
                     <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                        <p className="text-sm text-slate-500">
-                            Page {ingredient.pagination.page} of {totalPages}
-                            <span className="text-slate-400"> · </span>
-                            {totalCount} total
-                        </p>
-                        <div className="flex flex-wrap items-center gap-3">
-                            <label className="flex items-center gap-2 text-sm text-slate-600">
-                                <span className="text-slate-500">Per page</span>
-                                <select
-                                    value={ingredient.pagination.size}
+                        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-500">
+                            <span className="tabular-nums whitespace-nowrap">
+                                Page {ingredient.pagination.page} of {totalPages}
+                            </span>
+                            <span className="tabular-nums whitespace-nowrap">{totalCount} total</span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3 shrink-0">
+                            <label className="flex items-center gap-2 text-sm text-slate-600 whitespace-nowrap">
+                                <span className="text-slate-500 shrink-0">Per page</span>
+                                <ChevronSelect
+                                    value={String(ingredient.pagination.size)}
                                     onChange={(e) =>
                                         dispatch(setIngredientPageSize(Number(e.target.value)))
                                     }
-                                    className="pl-2 pr-8 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                    aria-label="Items per page"
+                                    wrapperClassName="min-w-17"
+                                    className="py-1.5 pl-2.5 tabular-nums"
                                 >
                                     {PAGE_SIZE_OPTIONS.map((n) => (
                                         <option key={n} value={n}>
                                             {n}
                                         </option>
                                     ))}
-                                </select>
+                                </ChevronSelect>
                             </label>
                             <div className="flex items-center gap-1">
                                 <button

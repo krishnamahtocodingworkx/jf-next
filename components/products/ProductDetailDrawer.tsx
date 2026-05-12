@@ -72,13 +72,14 @@ export default function ProductDetailDrawer({
 
     useEffect(() => {
         if (!product) return;
+        if (asPage) return;
         console.log("[ProductDetailDrawer] fetch detail", product.id);
         void dispatch(fetchProductDetail(product.id));
         return () => {
             console.log("[ProductDetailDrawer] clear on unmount");
             dispatch(clearProductDetail());
         };
-    }, [product, dispatch]);
+    }, [product, dispatch, asPage]);
 
     const complianceStatus: ProductComplianceStatus = useMemo(
         () => deriveProductComplianceFromApi(detail.data, product?.id ?? ""),
@@ -128,10 +129,21 @@ export default function ProductDetailDrawer({
         readStr(meta, ["updated_at", "last_updated", "updatedAt", "modified_at"]) !== "—"
             ? readStr(meta, ["updated_at", "last_updated", "updatedAt", "modified_at"])
             : new Date().toLocaleDateString();
-    const dateCreatedStr = readStr(meta, ["created_date", "date_created", "createdDate", "createdAt"]);
+    const dateCreatedStr = readStr(meta, [
+        "created_date",
+        "date_created",
+        "createdDate",
+        "createdAt",
+        "dateCreated",
+    ]);
     const fulfilmentStr = readStr(meta, ["fulfilment_date", "fulfillment_date", "fulfilmentDate"]);
     const flavorStr = readStr(meta, ["flavor", "flavour", "product_flavor"]);
-    const servingStr = readStr(meta, ["serving_size", "servingSize", "serving_amount"]);
+    const servingStr = readStr(meta, [
+        "serving_size",
+        "servingSize",
+        "serving_amount",
+        "Serving Size",
+    ]);
     const profitStr = readStr(meta, ["profit_margin", "profitMargin", "margin"]);
     const mfrStr = readStr(meta, ["manufacturer", "manufacturer_name", "manufacture"]);
 

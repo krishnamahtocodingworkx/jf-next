@@ -12,6 +12,8 @@ import { notifyApiSuccessToast } from "@/utils/showToast";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { fetchIngredientAddFormOptions } from "@/redux/ingredient/ingredients-thunks";
 import { getErrorMessage, isValidMongoObjectId } from "@/utils/commonFunctions";
+import { ChevronSelect } from "@/components/common/ChevronSelect";
+import { cn } from "@/lib/utils";
 
 type AddIngredientPanelProps = {
     open: boolean;
@@ -151,13 +153,14 @@ export default function AddIngredientPanel({
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">
                         Select company
                     </label>
-                    <select
+                    <ChevronSelect
                         value={values.company_id}
                         onChange={(e) => setField("company_id", e.target.value)}
                         disabled={addForm.status === "loading"}
-                        className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm disabled:opacity-60 ${
-                            errors.company_id ? "border-red-300" : "border-slate-200"
-                        }`}
+                        className={cn(
+                            "py-2.5",
+                            errors.company_id ? "border-red-300 focus:ring-red-200" : "",
+                        )}
                     >
                         <option value="">
                             {addForm.status === "loading"
@@ -169,7 +172,7 @@ export default function AddIngredientPanel({
                                 {o.label}
                             </option>
                         ))}
-                    </select>
+                    </ChevronSelect>
                     {errors.company_id && (
                         <p className="text-xs text-red-600 mt-1">{errors.company_id}</p>
                     )}
@@ -250,7 +253,7 @@ export default function AddIngredientPanel({
                         <label className="block text-sm font-medium text-slate-700 mb-1.5">
                             Country
                         </label>
-                        <select
+                        <ChevronSelect
                             value={countrySelectValue}
                             onChange={(e) => {
                                 const v = e.target.value;
@@ -258,7 +261,7 @@ export default function AddIngredientPanel({
                                 setField("country", opt?.label ?? v);
                             }}
                             disabled={addForm.status === "loading"}
-                            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm disabled:opacity-60"
+                            className="py-2.5"
                         >
                             <option value="">
                                 {addForm.status === "loading" ? "Loading countries…" : "Select country"}
@@ -268,7 +271,7 @@ export default function AddIngredientPanel({
                                     {o.label}
                                 </option>
                             ))}
-                        </select>
+                        </ChevronSelect>
                     </div>
                 </div>
 
@@ -296,16 +299,18 @@ export default function AddIngredientPanel({
                                 onChange={(e) => setField("price", e.target.value)}
                                 className="min-w-0 flex-1 px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                             />
-                            <select
+                            <ChevronSelect
+                                wrapperClassName="w-24 shrink-0"
                                 value={values.priceUnit}
                                 onChange={(e) => setField("priceUnit", e.target.value)}
-                                className="shrink-0 w-24 px-2 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                className="py-2.5 pl-2 pr-8 text-sm"
+                                iconClassName="right-1.5 h-3 w-3"
                             >
                                 <option>kg</option>
                                 <option>g</option>
                                 <option>lb</option>
                                 <option>l</option>
-                            </select>
+                            </ChevronSelect>
                         </div>
                     </div>
                 </div>
@@ -350,15 +355,15 @@ export default function AddIngredientPanel({
                         <label className="block text-sm font-medium text-slate-700 mb-1.5">
                             Upcycled
                         </label>
-                        <select
+                        <ChevronSelect
                             value={values.isUpcycled}
                             onChange={(e) => setField("isUpcycled", e.target.value)}
-                            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            className="py-2.5"
                         >
                             <option value="">Not specified</option>
                             <option value="true">Yes</option>
                             <option value="false">No</option>
-                        </select>
+                        </ChevronSelect>
                     </div>
                 </div>
 
