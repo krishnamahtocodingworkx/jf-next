@@ -73,7 +73,7 @@ export const manualLogin = createAsyncThunk(
       };
 
     } catch (error: any) { 
-      console.error("manualLogin error thunk:", error);
+      console.log("manualLogin error thunk:", error);
 
       return rejectWithValue(
         error?.message || "Login failed"
