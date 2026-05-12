@@ -35,7 +35,6 @@ function resolveAuth(override?: Partial<FirebaseOptions>): Auth {
     ...firebaseConfigFromEnv(),
     ...override,
   };
-  if (process.env.NODE_ENV === "development") {
     const required: (keyof FirebaseOptions)[] = [
       "apiKey",
       "authDomain",
@@ -48,7 +47,6 @@ function resolveAuth(override?: Partial<FirebaseOptions>): Auth {
     if (missing.length > 0) {
       console.log("[firebase] missing config keys:", missing.join(", "));
     }
-  }
   const app =
     getApps().length > 0 ? getApps()[0]! : initializeApp(config);
   authSingleton = getAuth(app);

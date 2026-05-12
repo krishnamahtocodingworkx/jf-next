@@ -1,9 +1,10 @@
-
-
-const WorkflowsPage = () => {
+export default function WorkflowsPage() {
     return (
-        <div>WorkflowsPage</div>
+        <div className="p-6">
+            <h1 className="text-2xl font-semibold text-slate-900 mb-4">Workflows</h1>
+            <p className="text-slate-700">
+                This is the Workflows page.
+            </p>
+        </div>
     )
 }
-
-export default WorkflowsPage

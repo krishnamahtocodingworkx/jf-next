@@ -36,6 +36,8 @@ export type ErrorResponse = {
   status: number;
 };
 
+type RetriableConfig = InternalAxiosRequestConfig & { _retry?: boolean };
+
 /** Rejects from axios interceptor (`{ message, status }`) — network/timeout already toasted in interceptor. */
 export function interceptorHandledNetworkOrTimeout(error: unknown): boolean {
   const e = error as { status?: number };
@@ -66,24 +68,15 @@ const createAxiosInstance = (
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    console.log("[auth] API request", config.method?.toUpperCase(), config.url);
+    console.log("[api] request", config.method?.toUpperCase(), config.url, token ? "(auth)" : "(anon)");
     return config;
   });
 
   instance.interceptors.response.use(
     (response: AxiosResponse) => response,
-    (error): Promise<ErrorResponse> => {
+    async (error): Promise<ErrorResponse | AxiosResponse> => {
       const axiosError = error as AxiosError;
-
-      const body = axiosError.response?.data as unknown;
-      const message =
-        parseBackendMessageBody(body) ??
-        (typeof body === "string" && body.trim() ? body.trim() : undefined) ??
-        axiosError.response?.statusText ??
-        axiosError.message ??
-        SOMETHING_WENT_WRONG;
-
-      const status: number = axiosError.response?.status ?? axiosError.status ?? 0;
+      const originalReq = axiosError.config as RetriableConfig | undefined;
 
       if (!axiosError.response) {
         if (axiosError.code === "ECONNABORTED") {
@@ -100,6 +93,48 @@ const createAxiosInstance = (
         });
       }
 
+      const body = axiosError.response?.data as unknown;
+      const message =
+        parseBackendMessageBody(body) ??
+        (typeof body === "string" && body.trim() ? body.trim() : undefined) ??
+        axiosError.response?.statusText ??
+        axiosError.message ??
+        SOMETHING_WENT_WRONG;
+
+      const status: number = axiosError.response?.status ?? axiosError.status ?? 0;
+
+      const refreshToken = storage.getItem("refresh_token");
+      const errBody = (body as { detail?: string } | undefined) ?? undefined;
+
+      if (
+        status === STATUS_CODE.Unauthorized &&
+        originalReq &&
+        !originalReq._retry &&
+        refreshToken &&
+        errBody?.detail === "INVALID TOKEN"
+      ) {
+        originalReq._retry = true;
+        try {
+          console.log("[api] attempting refresh token flow");
+          const res = await instance.post(ENDPOINTS.AUTH.REFRESH_TOKEN, {
+            refresh_token: refreshToken,
+          });
+          const payload = (res.data?.data ?? res.data) as {
+            access_token?: string;
+            refresh_token?: string;
+            idToken?: string;
+          };
+          if (payload?.access_token) storage.setItem("access_token", payload.access_token);
+          if (payload?.refresh_token) storage.setItem("refresh_token", payload.refresh_token);
+          if (payload?.idToken) storage.setItem("idToken", payload.idToken);
+          return instance.request(originalReq);
+        } catch (refreshError) {
+          console.log("[api] refresh token failed", refreshError);
+          sessionExpireHandler();
+          return Promise.reject({ message, status });
+        }
+      }
+
       if (status === STATUS_CODE.Unauthorized) {
         sessionExpireHandler();
       }
@@ -114,3 +149,17 @@ const createAxiosInstance = (
 export const api = createAxiosInstance(BASE_URL, {
   "Content-Type": "application/json",
 });
+
+/**
+ * Lightweight error toast wrapper
+ * `Api.handleError(err, title)` helper, but tailored to the
+ * `{ message, status }` shape produced by our interceptor.
+ */
+export function handleApiError(error: unknown, title?: string): void {
+  if (interceptorHandledNetworkOrTimeout(error)) return;
+  const e = error as { message?: string; status?: number };
+  if (e?.status === STATUS_CODE.Unauthorized) return;
+  const message = e?.message || SOMETHING_WENT_WRONG;
+  console.log("[api] handleApiError", title, message);
+  SHOW_ERROR_TOAST(title ? `${title}: ${message}` : message);
+}

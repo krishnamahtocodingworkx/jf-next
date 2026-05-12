@@ -1,0 +1,184 @@
+import { createSlice, createAsyncThunk, createSelector, PayloadAction } from "@reduxjs/toolkit";
+import { ingredientService } from "@/services/ingredient-service";
+import type {
+    IIngredientCatalogRow,
+    IIngredientPagination,
+    ISupplierIngredient,
+} from "@/interfaces/ingredient";
+import { ingredientToCatalogRow } from "@/redux/ingredient/ingredient-adapter";
+
+export type IngredientStatusFilter = "all" | "active" | "concept" | "flagged";
+export type IngredientFormFilter = "all" | "powder" | "liquid" | "puree" | "granule" | "crystal";
+export type IngredientCategoryFilter =
+    | "all"
+    | "food"
+    | "beverages"
+    | "cosmetic"
+    | "household"
+    | "supplement";
+
+export interface IngredientCatalogUi {
+    statusFilter: IngredientStatusFilter;
+    formFilter: IngredientFormFilter;
+    categoryFilter: IngredientCategoryFilter;
+    displayMode: "grid" | "list";
+    searchApplied: string;
+}
+
+export interface IngredientDetailState {
+    id: string | null;
+    data: ISupplierIngredient | undefined;
+    status: "idle" | "loading" | "succeeded" | "failed";
+}
+
+export interface IngredientState {
+    list: ISupplierIngredient[];
+    pagination: IIngredientPagination;
+    loadStatus: "idle" | "loading" | "succeeded" | "failed";
+    ui: IngredientCatalogUi;
+    detail: IngredientDetailState;
+}
+
+const initialPagination: IIngredientPagination = {
+    page: 1,
+    pages: 1,
+    size: 12,
+    total: 0,
+};
+
+const initialUi: IngredientCatalogUi = {
+    statusFilter: "all",
+    formFilter: "all",
+    categoryFilter: "all",
+    displayMode: "grid",
+    searchApplied: "",
+};
+
+const initialState: IngredientState = {
+    list: [],
+    pagination: { ...initialPagination },
+    loadStatus: "idle",
+    ui: { ...initialUi },
+    detail: { id: null, data: undefined, status: "idle" },
+};
+
+export const fetchIngredientsPage = createAsyncThunk(
+    "ingredient/fetchPage",
+    async (_, { getState }) => {
+        const root = getState() as { ingredient: IngredientState };
+        const { pagination, ui } = root.ingredient;
+        const page = Math.max(1, pagination.page || 1);
+        const size = Math.max(1, pagination.size || 12);
+        const search = ui.searchApplied.trim();
+        if (search) {
+            return ingredientService.searchIngredients(search, page, size);
+        }
+        return ingredientService.fetchPaginatedIngredients(page, size);
+    },
+);
+
+export const fetchIngredientDetail = createAsyncThunk(
+    "ingredient/fetchDetail",
+    async (id: string) => {
+        const ingredient = await ingredientService.fetchIngredientById(id);
+        return { id, ingredient };
+    },
+);
+
+const ingredientSlice = createSlice({
+    name: "ingredient",
+    initialState,
+    reducers: {
+        setIngredientSearch(state, action: PayloadAction<string>) {
+            state.ui.searchApplied = action.payload;
+            state.pagination.page = 1;
+        },
+        setIngredientStatusFilter(state, action: PayloadAction<IngredientStatusFilter>) {
+            state.ui.statusFilter = action.payload;
+        },
+        setIngredientFormFilter(state, action: PayloadAction<IngredientFormFilter>) {
+            state.ui.formFilter = action.payload;
+        },
+        setIngredientCategoryFilter(state, action: PayloadAction<IngredientCategoryFilter>) {
+            state.ui.categoryFilter = action.payload;
+        },
+        setIngredientDisplayMode(state, action: PayloadAction<"grid" | "list">) {
+            state.ui.displayMode = action.payload;
+        },
+        setIngredientPage(state, action: PayloadAction<number>) {
+            state.pagination.page = Math.max(1, action.payload);
+        },
+        setIngredientPageSize(state, action: PayloadAction<number>) {
+            state.pagination.size = Math.max(1, action.payload);
+            state.pagination.page = 1;
+        },
+        clearIngredientDetail(state) {
+            state.detail = { id: null, data: undefined, status: "idle" };
+        },
+    },
+    extraReducers: (builder) => {
+        builder
+            .addCase(fetchIngredientsPage.pending, (state) => {
+                state.loadStatus = "loading";
+            })
+            .addCase(fetchIngredientsPage.fulfilled, (state, action) => {
+                state.loadStatus = "succeeded";
+                state.list = action.payload.list;
+                state.pagination = action.payload.pagination;
+            })
+            .addCase(fetchIngredientsPage.rejected, (state) => {
+                state.loadStatus = "failed";
+            })
+            .addCase(fetchIngredientDetail.pending, (state, action) => {
+                state.detail.status = "loading";
+                state.detail.id = action.meta.arg;
+            })
+            .addCase(fetchIngredientDetail.fulfilled, (state, action) => {
+                state.detail.status = action.payload.ingredient ? "succeeded" : "failed";
+                state.detail.data = action.payload.ingredient;
+                state.detail.id = action.payload.id;
+            })
+            .addCase(fetchIngredientDetail.rejected, (state) => {
+                state.detail.status = "failed";
+                state.detail.data = undefined;
+            });
+    },
+});
+
+export const {
+    setIngredientSearch,
+    setIngredientStatusFilter,
+    setIngredientFormFilter,
+    setIngredientCategoryFilter,
+    setIngredientDisplayMode,
+    setIngredientPage,
+    setIngredientPageSize,
+    clearIngredientDetail,
+} = ingredientSlice.actions;
+
+export default ingredientSlice.reducer;
+
+type IngredientRoot = { ingredient: IngredientState };
+
+const selectIngredientState = (s: IngredientRoot) => s.ingredient;
+
+export const selectIngredientCatalogRows = createSelector(
+    [selectIngredientState],
+    (state): IIngredientCatalogRow[] => {
+        const rows = state.list.map(ingredientToCatalogRow);
+        const { statusFilter, formFilter, categoryFilter } = state.ui;
+        return rows.filter((row) => {
+            if (statusFilter === "active" && row.activeProducts <= 0) return false;
+            if (statusFilter === "concept" && row.conceptProducts <= 0) return false;
+            if (statusFilter === "flagged" && !row.flagged) return false;
+            if (formFilter !== "all" && row.form.toLowerCase() !== formFilter) return false;
+            if (categoryFilter !== "all" && row.category.toLowerCase() !== categoryFilter) return false;
+            return true;
+        });
+    },
+);
+
+export const selectIngredientCatalogTotal = createSelector(
+    [selectIngredientState],
+    (state) => state.pagination.total,
+);

@@ -1,4 +1,4 @@
-export default function PackingPage() {
+export default function PackagingPage() {
     return (
         <div className="p-6">
             <h1 className="text-2xl font-semibold text-slate-900 mb-4">Packaging</h1>

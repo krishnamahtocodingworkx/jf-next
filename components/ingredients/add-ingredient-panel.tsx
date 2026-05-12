@@ -1,0 +1,387 @@
+"use client";
+
+import { useState } from "react";
+import { Leaf, Save, X } from "lucide-react";
+import SidePanel from "@/components/common/side-panel";
+import {
+    ingredientService,
+    buildAddIngredientPayload,
+    type AddIngredientFormValues,
+} from "@/services/ingredient-service";
+import { notifyApiSuccessToast } from "@/utils/showToast";
+
+type AddIngredientPanelProps = {
+    open: boolean;
+    onClose: () => void;
+    onCreated?: () => void;
+};
+
+function todayYmd(): string {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+}
+
+function getInitialValues(): AddIngredientFormValues {
+    return {
+        company_id: "",
+        jfDisplayName: "",
+        name: "",
+        scientificName: "",
+        variety: "",
+        manufacturer: "",
+        country: "",
+        servingSize: "",
+        price: "",
+        priceUnit: "kg",
+        storageCondition: "",
+        seasonality: "",
+        created_date: todayYmd(),
+        isAdditive: false,
+        isUpcycled: "",
+        nutritionalSummary: "",
+        claim: "",
+        notes: "",
+    };
+}
+
+export default function AddIngredientPanel({
+    open,
+    onClose,
+    onCreated,
+}: AddIngredientPanelProps) {
+    const [values, setValues] = useState<AddIngredientFormValues>(getInitialValues());
+    const [submitting, setSubmitting] = useState(false);
+    const [errors, setErrors] = useState<Partial<Record<keyof AddIngredientFormValues, string>>>({});
+    const [serverError, setServerError] = useState("");
+
+    const setField = <K extends keyof AddIngredientFormValues>(
+        key: K,
+        v: AddIngredientFormValues[K],
+    ) => {
+        setValues((prev) => ({ ...prev, [key]: v }));
+    };
+
+    const validate = (): boolean => {
+        const next: typeof errors = {};
+        if (!values.jfDisplayName.trim()) next.jfDisplayName = "JF display name is required";
+        if (!values.name.trim()) next.name = "Name is required";
+        setErrors(next);
+        return Object.keys(next).length === 0;
+    };
+
+    const resetAndClose = () => {
+        console.log("[AddIngredientPanel] reset and close");
+        setValues(getInitialValues());
+        setErrors({});
+        setServerError("");
+        onClose();
+    };
+
+    const handleSubmit = async () => {
+        if (!validate()) return;
+        setServerError("");
+        setSubmitting(true);
+        try {
+            const payload = buildAddIngredientPayload(values, null);
+            console.log("[AddIngredientPanel] submit", {
+                jfDisplayName: payload.jfDisplayName,
+                name: payload.name,
+            });
+            await ingredientService.addIngredient(payload);
+            notifyApiSuccessToast({ message: "Ingredient added" });
+            onCreated?.();
+            resetAndClose();
+        } catch (e) {
+            console.log("[AddIngredientPanel] submit failed", e);
+            const message =
+                (e as { message?: string })?.message || "Failed to add ingredient. Try again.";
+            setServerError(message);
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    return (
+        <SidePanel
+            open={open}
+            onClose={resetAndClose}
+            title="Add Ingredient"
+            icon={<Leaf className="h-5 w-5 text-green-600" />}
+            width="max-w-2xl"
+            footer={
+                <>
+                    <button
+                        type="button"
+                        onClick={resetAndClose}
+                        className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-slate-600 hover:text-slate-900 rounded-lg"
+                    >
+                        <X className="h-4 w-4" />
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleSubmit}
+                        disabled={submitting}
+                        className="flex items-center gap-2 px-6 py-2.5 bg-emerald-500 text-white text-sm font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                        <Save className="h-4 w-4" />
+                        {submitting ? "Saving..." : "Save Ingredient"}
+                    </button>
+                </>
+            }
+        >
+            <div className="space-y-6">
+                {serverError && (
+                    <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                        {serverError}
+                    </div>
+                )}
+
+                <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                        Select company
+                    </label>
+                    <input
+                        type="text"
+                        value={values.company_id}
+                        onChange={(e) => setField("company_id", e.target.value)}
+                        placeholder="Company id"
+                        className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                    <div className="col-span-1">
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                            JF display name<span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            value={values.jfDisplayName}
+                            onChange={(e) => setField("jfDisplayName", e.target.value)}
+                            placeholder="e.g. Organic Tomato"
+                            className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${
+                                errors.jfDisplayName ? "border-red-300" : "border-slate-200"
+                            }`}
+                        />
+                        {errors.jfDisplayName && (
+                            <p className="text-xs text-red-600 mt-1">{errors.jfDisplayName}</p>
+                        )}
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                            Name<span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            value={values.name}
+                            onChange={(e) => setField("name", e.target.value)}
+                            placeholder="Common name"
+                            className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${
+                                errors.name ? "border-red-300" : "border-slate-200"
+                            }`}
+                        />
+                        {errors.name && (
+                            <p className="text-xs text-red-600 mt-1">{errors.name}</p>
+                        )}
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                            Scientific name
+                        </label>
+                        <input
+                            type="text"
+                            value={values.scientificName}
+                            onChange={(e) => setField("scientificName", e.target.value)}
+                            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                            Variety
+                        </label>
+                        <input
+                            type="text"
+                            value={values.variety}
+                            onChange={(e) => setField("variety", e.target.value)}
+                            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                            Manufacturer
+                        </label>
+                        <input
+                            type="text"
+                            value={values.manufacturer}
+                            onChange={(e) => setField("manufacturer", e.target.value)}
+                            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                            Country
+                        </label>
+                        <input
+                            type="text"
+                            value={values.country}
+                            onChange={(e) => setField("country", e.target.value)}
+                            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                            Serving size
+                        </label>
+                        <input
+                            type="text"
+                            value={values.servingSize}
+                            onChange={(e) => setField("servingSize", e.target.value)}
+                            placeholder="e.g. 100g"
+                            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                            Price
+                        </label>
+                        <div className="flex gap-2">
+                            <input
+                                type="number"
+                                value={values.price}
+                                onChange={(e) => setField("price", e.target.value)}
+                                className="flex-1 px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            />
+                            <select
+                                value={values.priceUnit}
+                                onChange={(e) => setField("priceUnit", e.target.value)}
+                                className="w-20 px-2 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            >
+                                <option>kg</option>
+                                <option>g</option>
+                                <option>lb</option>
+                                <option>l</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                            Storage condition
+                        </label>
+                        <input
+                            type="text"
+                            value={values.storageCondition}
+                            onChange={(e) => setField("storageCondition", e.target.value)}
+                            placeholder="Cool, dry place"
+                            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                            Seasonality
+                        </label>
+                        <input
+                            type="text"
+                            value={values.seasonality}
+                            onChange={(e) => setField("seasonality", e.target.value)}
+                            placeholder="e.g. Year round"
+                            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                            Created date
+                        </label>
+                        <input
+                            type="date"
+                            value={values.created_date}
+                            onChange={(e) => setField("created_date", e.target.value)}
+                            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                            Upcycled
+                        </label>
+                        <select
+                            value={values.isUpcycled}
+                            onChange={(e) => setField("isUpcycled", e.target.value)}
+                            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        >
+                            <option value="">Not specified</option>
+                            <option value="true">Yes</option>
+                            <option value="false">No</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                            Additive
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={values.isAdditive}
+                                onChange={(e) => setField("isAdditive", e.target.checked)}
+                                className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="text-sm text-slate-600">
+                                This ingredient is an additive
+                            </span>
+                        </label>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                            Claim
+                        </label>
+                        <input
+                            type="text"
+                            value={values.claim}
+                            onChange={(e) => setField("claim", e.target.value)}
+                            placeholder="Organic, Non-GMO..."
+                            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        />
+                    </div>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                        Nutritional summary
+                    </label>
+                    <textarea
+                        value={values.nutritionalSummary}
+                        onChange={(e) => setField("nutritionalSummary", e.target.value)}
+                        className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"
+                        rows={3}
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                        Notes
+                    </label>
+                    <textarea
+                        value={values.notes}
+                        onChange={(e) => setField("notes", e.target.value)}
+                        className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"
+                        rows={3}
+                    />
+                </div>
+            </div>
+        </SidePanel>
+    );
+}
