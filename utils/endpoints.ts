@@ -7,7 +7,7 @@ export const ENDPOINTS = {
     LOGOUT: "/api/v1/auth/logout",
   },
   PROFILE: {
-    COMPANY_TYPE: "/api/v1/profile_company_type/",
+    COMPANY_TYPE: `/api/v1/companyType/company-type-list`,
   },
   COUNTRY: {
     GET_ALL: "/api/v1/country/get-all-countries",
