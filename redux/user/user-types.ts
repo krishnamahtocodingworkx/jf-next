@@ -21,6 +21,13 @@ export interface AuthUser {
   createdAt: string;
   updatedAt: string;
   profilePicture: string;
+  company?: {
+    _id?: string;
+    id?: string;
+    name?: string;
+    companyName?: string;
+    title?: string;
+  };
 }
 
 export interface UserState {

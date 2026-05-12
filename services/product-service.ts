@@ -2,8 +2,8 @@ import { api } from "@/services/api";
 import { ENDPOINTS } from "@/utils/endpoints";
 import { handleApiError } from "@/utils/service";
 import type { IProduct } from "@/interfaces/product";
-
-const isMongoObjectId = (value: unknown): boolean => /^[a-f\d]{24}$/i.test(String(value || "").trim());
+import type { SelectOption } from "@/utils/model";
+import { isValidMongoObjectId, unwrapApiListData, normalizeEntitySelectOptions, normalizeCurrencySelectOptionsFromRows } from "@/utils/commonFunctions";
 
 /** Map v1 `get-product-list` row + legacy shapes to a single item with `id` for UI. */
 export function normalizeProductListItem(raw: Record<string, unknown>): Record<string, unknown> {
@@ -56,8 +56,8 @@ export function buildCreateProductPayload(
             ? String(values.manufacturer).trim()
             : "";
     const brandIdRaw = values.brand_id ? String(values.brand_id).trim() : "";
-    const brandId = isMongoObjectId(brandIdRaw) ? brandIdRaw : "";
-    const manufacturerId = isMongoObjectId(mfg) ? mfg : null;
+    const brandId = isValidMongoObjectId(brandIdRaw) ? brandIdRaw : "";
+    const manufacturerId = isValidMongoObjectId(mfg) ? mfg : null;
     const companyIdRaw = values.company_id
         ? String(values.company_id)
         : String(
@@ -65,7 +65,7 @@ export function buildCreateProductPayload(
                   (profile?.company as { id?: string; _id?: string } | undefined)?._id ||
                   "",
           );
-    const companyId = isMongoObjectId(companyIdRaw) ? companyIdRaw : "";
+    const companyId = isValidMongoObjectId(companyIdRaw) ? companyIdRaw : "";
     return {
         name: String(values.name || "").trim(),
         description: String(values.notes || "").trim(),
@@ -244,6 +244,21 @@ class ProductService {
         } catch (e) {
             handleApiError(e, "New Version");
             throw e;
+        }
+    }
+
+    async getCurrencyOptions(): Promise<SelectOption[]> {
+        try {
+            const { data } = await api.get(ENDPOINTS.CURRENCY.LIST);
+            const rows = unwrapApiListData(data?.data ?? data);
+            const fromCurrencyShape = normalizeCurrencySelectOptionsFromRows(rows);
+            const opts =
+                fromCurrencyShape.length > 0 ? fromCurrencyShape : normalizeEntitySelectOptions(rows);
+            console.log("[productService] getCurrencyOptions", opts.length);
+            return opts.length ? opts : [{ value: "USD", label: "USD - US Dollar" }];
+        } catch (e) {
+            console.log("[productService] getCurrencyOptions failed", e);
+            return [{ value: "USD", label: "USD - US Dollar" }];
         }
     }
 }

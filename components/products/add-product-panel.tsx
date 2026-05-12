@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown, Package, Save, X } from "lucide-react";
-import SidePanel from "@/components/common/side-panel";
 import { productService, buildCreateProductPayload } from "@/services/product-service";
 import { notifyApiSuccessToast } from "@/utils/showToast";
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
+import { fetchProductAddFormOptions } from "@/redux/product/product-thunks";
+import { getErrorMessage, isValidMongoObjectId } from "@/utils/commonFunctions";
 
 type AddProductPanelProps = {
     open: boolean;
@@ -62,16 +64,25 @@ const initialFormData: AddProductFormData = {
     cost: "0",
     retailCost: "0",
     profitMargin: "0",
-    country: "United States",
-    currency: "United States Dollar",
+    country: "",
+    currency: "",
     objectives: "",
     notes: "",
 };
 
 export default function AddProductPanel({ open, onClose, onCreated }: AddProductPanelProps) {
+    const dispatch = useAppDispatch();
+    const profile = useAppSelector((s) => s.user.details);
+    const addForm = useAppSelector((s) => s.product.addFormOptions);
     const [formData, setFormData] = useState<AddProductFormData>(initialFormData);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string>("");
+
+    useEffect(() => {
+        if (!open) return;
+        console.log("[AddProductPanel] open — fetch add form options");
+        void dispatch(fetchProductAddFormOptions());
+    }, [open, dispatch]);
 
     const updateField = <K extends keyof AddProductFormData>(key: K, value: AddProductFormData[K]) => {
         setFormData((prev) => ({ ...prev, [key]: value }));
@@ -89,6 +100,18 @@ export default function AddProductPanel({ open, onClose, onCreated }: AddProduct
             setError("Product name is required");
             return;
         }
+        if (!isValidMongoObjectId(formData.company)) {
+            setError("Please select a company from the list.");
+            return;
+        }
+        if (!isValidMongoObjectId(formData.brand)) {
+            setError("Please select a brand from the list.");
+            return;
+        }
+        if (formData.manufacturer.trim() && !isValidMongoObjectId(formData.manufacturer)) {
+            setError("Please select a manufacturer from the list, or leave it blank.");
+            return;
+        }
         setError("");
         setSubmitting(true);
         try {
@@ -102,7 +125,7 @@ export default function AddProductPanel({ open, onClose, onCreated }: AddProduct
                     company_id: formData.company,
                     ingredients: [],
                 },
-                null,
+                profile as Record<string, unknown> | null,
             );
             console.log("[AddProductPanel] submit", { name: payload.name });
             const result = await productService.addProduct(payload);
@@ -112,62 +135,63 @@ export default function AddProductPanel({ open, onClose, onCreated }: AddProduct
             return result;
         } catch (e) {
             console.log("[AddProductPanel] submit failed", e);
-            const message =
-                (e as { message?: string })?.message || "Failed to create product. Try again.";
-            setError(message);
+            setError(getErrorMessage(e, "Failed to create product. Try again."));
         } finally {
             setSubmitting(false);
         }
     };
 
     return (
-        <SidePanel
-            open={open}
-            onClose={resetAndClose}
-            title="Add Product"
-            icon={<Package className="h-5 w-5 text-blue-600" />}
-            width="max-w-2xl"
-            footer={
-                <>
-                    <button
-                        type="button"
-                        onClick={resetAndClose}
-                        className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-slate-600 hover:text-slate-900 rounded-lg"
-                    >
-                        <X className="h-4 w-4" />
-                        Cancel
-                    </button>
-                    <button
-                        type="button"
-                        onClick={handleSubmit}
-                        disabled={submitting}
-                        className="flex items-center gap-2 px-6 py-2.5 bg-emerald-500 text-white text-sm font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                        <Save className="h-4 w-4" />
-                        {submitting ? "Saving..." : "Save Detail"}
-                    </button>
-                </>
-            }
-        >
-            <div className="space-y-6">
-                {error && (
-                    <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                        {error}
-                    </div>
-                )}
+        <>
+            {open ? (
+                <div className="fixed inset-0 z-50 flex">
+                    <div className="flex-1 bg-black/40" onClick={resetAndClose} />
+                    <div className="w-full max-w-2xl bg-white shadow-2xl flex flex-col overflow-hidden">
+                        <div className="flex items-center justify-between p-6 border-b border-slate-200">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-blue-100 rounded-lg">
+                                    <Package className="h-5 w-5 text-blue-600" />
+                                </div>
+                                <h2 className="text-lg font-semibold text-slate-800">Add Product</h2>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={resetAndClose}
+                                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                            >
+                                <X className="h-5 w-5 text-slate-500" />
+                            </button>
+                        </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                        Select Company
-                    </label>
-                    <input
-                        type="text"
-                        value={formData.company}
-                        onChange={(e) => updateField("company", e.target.value)}
-                        placeholder="Company id or name"
-                        className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    />
-                </div>
+                        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                            {error && (
+                                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                                    {error}
+                                </div>
+                            )}
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                                    Select Company
+                                </label>
+                                <select
+                                    value={formData.company}
+                                    onChange={(e) => updateField("company", e.target.value)}
+                                    disabled={addForm.status === "loading"}
+                                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm disabled:opacity-60"
+                                >
+                                    <option value="">
+                                        {addForm.status === "loading"
+                                            ? "Loading companies…"
+                                            : "Select company"}
+                                    </option>
+                                    {addForm.companies.map((o) => (
+                                        <option key={o.value} value={o.value}>
+                                            {o.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
 
                 <div className="grid grid-cols-3 gap-4">
                     <div>
@@ -246,13 +270,21 @@ export default function AddProductPanel({ open, onClose, onCreated }: AddProduct
                             Brand
                         </label>
                         <div className="relative">
-                            <input
-                                type="text"
+                            <select
                                 value={formData.brand}
                                 onChange={(e) => updateField("brand", e.target.value)}
-                                placeholder="Brand id"
-                                className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm appearance-none"
-                            />
+                                disabled={addForm.status === "loading"}
+                                className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm appearance-none disabled:opacity-60"
+                            >
+                                <option value="">
+                                    {addForm.status === "loading" ? "Loading brands…" : "Select brand"}
+                                </option>
+                                {addForm.brands.map((o) => (
+                                    <option key={o.value} value={o.value}>
+                                        {o.label}
+                                    </option>
+                                ))}
+                            </select>
                             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                         </div>
                     </div>
@@ -274,13 +306,23 @@ export default function AddProductPanel({ open, onClose, onCreated }: AddProduct
                         <label className="block text-sm font-medium text-slate-700 mb-1.5">
                             Manufacturer
                         </label>
-                        <input
-                            type="text"
+                        <select
                             value={formData.manufacturer}
                             onChange={(e) => updateField("manufacturer", e.target.value)}
-                            placeholder="Manufacturer id"
-                            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                        />
+                            disabled={addForm.status === "loading"}
+                            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm disabled:opacity-60"
+                        >
+                            <option value="">
+                                {addForm.status === "loading"
+                                    ? "Loading manufacturers…"
+                                    : "Select manufacturer (optional)"}
+                            </option>
+                            {addForm.manufacturers.map((o) => (
+                                <option key={o.value} value={o.value}>
+                                    {o.label}
+                                </option>
+                            ))}
+                        </select>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1.5">
@@ -457,12 +499,17 @@ export default function AddProductPanel({ open, onClose, onCreated }: AddProduct
                             <select
                                 value={formData.country}
                                 onChange={(e) => updateField("country", e.target.value)}
-                                className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm appearance-none"
+                                disabled={addForm.status === "loading"}
+                                className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm appearance-none disabled:opacity-60"
                             >
-                                <option>United States</option>
-                                <option>Canada</option>
-                                <option>United Kingdom</option>
-                                <option>India</option>
+                                <option value="">
+                                    {addForm.status === "loading" ? "Loading countries…" : "Select country"}
+                                </option>
+                                {addForm.countries.map((o) => (
+                                    <option key={o.value} value={o.value}>
+                                        {o.label}
+                                    </option>
+                                ))}
                             </select>
                             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                         </div>
@@ -475,12 +522,17 @@ export default function AddProductPanel({ open, onClose, onCreated }: AddProduct
                             <select
                                 value={formData.currency}
                                 onChange={(e) => updateField("currency", e.target.value)}
-                                className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm appearance-none"
+                                disabled={addForm.status === "loading"}
+                                className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm appearance-none disabled:opacity-60"
                             >
-                                <option>United States Dollar</option>
-                                <option>Canadian Dollar</option>
-                                <option>British Pound</option>
-                                <option>Indian Rupee</option>
+                                <option value="">
+                                    {addForm.status === "loading" ? "Loading currencies…" : "Select currency"}
+                                </option>
+                                {addForm.currencies.map((o) => (
+                                    <option key={o.value} value={o.value}>
+                                        {o.label}
+                                    </option>
+                                ))}
                             </select>
                             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                         </div>
@@ -491,13 +543,14 @@ export default function AddProductPanel({ open, onClose, onCreated }: AddProduct
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">
                         Ingredients
                     </label>
-                    <div className="flex items-center gap-2 px-3 py-2.5 border border-slate-200 rounded-lg">
-                        <input
-                            type="text"
-                            className="flex-1 focus:outline-none text-sm bg-transparent"
-                            placeholder="Search Ingredient to add..."
-                        />
-                    </div>
+                            <div className="flex items-center gap-2 px-3 py-2.5 border border-slate-200 rounded-lg">
+                                <input
+                                    type="text"
+                                    className="flex-1 focus:outline-none text-sm bg-transparent"
+                                    placeholder="Search Ingredient to add..."
+                                />
+                                <X className="h-4 w-4 text-slate-400 cursor-pointer hover:text-slate-600 shrink-0" />
+                            </div>
                     <p className="text-xs text-slate-400 mt-1">
                         Linked ingredients can be edited after the product is created.
                     </p>
@@ -532,10 +585,25 @@ export default function AddProductPanel({ open, onClose, onCreated }: AddProduct
                 </div>
 
                 <p className="text-sm text-slate-500">
-                    These preferences will help tailor our product suggestions and filter your
-                    live searching whilst using the app.
+                    These preferences will help tailor our product suggestions and filter your live
+                    searching whilst using the app.
                 </p>
-            </div>
-        </SidePanel>
+                        </div>
+
+                        <div className="p-4 border-t border-slate-200 flex justify-end">
+                            <button
+                                type="button"
+                                onClick={handleSubmit}
+                                disabled={submitting}
+                                className="flex items-center gap-2 px-6 py-2.5 bg-emerald-500 text-white text-sm font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                                <Save className="h-4 w-4" />
+                                {submitting ? "Saving..." : "Save Detail"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
+        </>
     );
 }

@@ -11,13 +11,14 @@ type ProductGridCardProps = {
 
 export default function ProductGridCard({ product, onView }: ProductGridCardProps) {
     const status: "active" | "concept" = product.product_status ? "active" : "concept";
+    console.log("[ProductGridCard]", product.id);
     return (
         <div
             className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-slate-300 transition-all cursor-pointer"
             onClick={onView}
         >
             <div className="flex items-start gap-3 mb-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-100 to-blue-50 border border-blue-200 flex items-center justify-center shrink-0">
+                <div className="w-12 h-12 rounded-xl bg-linear-to-br from-blue-100 to-blue-50 border border-blue-200 flex items-center justify-center shrink-0">
                     <Package className="h-6 w-6 text-blue-500" />
                 </div>
                 <div className="flex-1 min-w-0">

@@ -19,6 +19,13 @@ export const ENDPOINTS = {
     PERMISSIONS: `${API}/user/access-permissions`,
     BRANDS: `${API}/user/brands/`,
   },
+  COMPANY: {
+    /** List companies for selects (Add Product), aligned with JourneyFoodsDashboardUpgraded. */
+    LIST_FOR_SELECT: `${API}/companies/`,
+  },
+  PRODUCT_BRAND: {
+    GET_BY_ID: (productId: string) => `${API}/productBrand/get-product-brand/${productId}`,
+  },
   INGREDIENT: {
     GET_INGREDIENT_LIST: `${API}/ingredient/get-ingredient-list`,
     ADD_INGREDIENT: `${API}/ingredient/add-ingredient`,
@@ -29,6 +36,8 @@ export const ENDPOINTS = {
   },
   PRODUCTS: {
     LIST: `${API}/user/products/`,
+    /** Manufacturer list for Add Product ( `USER.MANUFACTURERS`). */
+    MANUFACTURERS: `${API}/products/manufacturers/`,
     GET_PRODUCT_LIST: `${API}/product/get-product-list`,
     CREATE_PRODUCT: `${API}/product/create-product`,
     BY_ID: (id: string) => `${API}/user/products/${id}/`,

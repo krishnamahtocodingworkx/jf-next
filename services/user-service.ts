@@ -1,7 +1,7 @@
 import { api } from "@/services/api";
 import { ENDPOINTS } from "@/utils/endpoints";
 import { auth } from "@/lib/firebase";
-import { attachBackendSuccessMessage, normalizeCountryOptions } from "@/utils/commonFunctions";
+import { attachBackendSuccessMessage, normalizeCountryOptions, unwrapApiListData, normalizeEntitySelectOptions } from "@/utils/commonFunctions";
 import {
   signInWithCustomToken,
   signInWithEmailAndPassword,
@@ -10,6 +10,7 @@ import {
   sendEmailVerification,
 } from "firebase/auth";
 import { notifyApiSuccessToast } from "@/utils/showToast";
+import type { SelectOption } from "@/utils/model";
 
 type RegisterPayload = {
   firstName: string;
@@ -124,6 +125,65 @@ class UserService {
     await confirmPasswordReset(auth, code, password);
     console.log("[auth] firebase password reset success", code);
     return true;
+  }
+
+  async getBrands(): Promise<SelectOption[]> {
+    try {
+      const { data } = await api.get(ENDPOINTS.USER.BRANDS);
+      const rows = unwrapApiListData(data?.data ?? data);
+      const opts = normalizeEntitySelectOptions(rows);
+      console.log("[userService] getBrands", opts.length);
+      return opts;
+    } catch (error) {
+      console.log("[userService] getBrands failed", error);
+      return [];
+    }
+  }
+
+  async getCompanies(): Promise<SelectOption[]> {
+    try {
+      const { data } = await api.get(ENDPOINTS.COMPANY.LIST_FOR_SELECT);
+      const rows = unwrapApiListData(data?.data ?? data);
+      const opts = normalizeEntitySelectOptions(rows);
+      console.log("[userService] getCompanies", opts.length);
+      return opts;
+    } catch (error) {
+      console.log("[userService] getCompanies failed", error);
+      return [];
+    }
+  }
+
+  async getManufacturers(): Promise<SelectOption[]> {
+    try {
+      const { data } = await api.get(ENDPOINTS.PRODUCTS.MANUFACTURERS);
+      const rows = unwrapApiListData(data?.data ?? data);
+      const opts = normalizeEntitySelectOptions(rows);
+      console.log("[userService] getManufacturers", opts.length);
+      return opts;
+    } catch (error) {
+      console.log("[userService] getManufacturers failed", error);
+      return [];
+    }
+  }
+
+  /** Brand object for a product id (`GET /api/v1/productBrand/get-product-brand/:id`). */
+  async getProductBrandById(productId: string): Promise<Record<string, unknown> | null> {
+    const clean = String(productId || "").trim();
+    if (!clean) return null;
+    try {
+      const { data } = await api.get(ENDPOINTS.PRODUCT_BRAND.GET_BY_ID(clean));
+      const nested = (data as Record<string, unknown> | undefined)?.data as
+        | Record<string, unknown>
+        | undefined;
+      const row = (nested?.data ?? nested ?? null) as Record<string, unknown> | null;
+      const usable =
+        row && typeof row === "object" && Object.keys(row).length > 0 ? row : null;
+      console.log("[userService] getProductBrandById", clean, Boolean(usable));
+      return usable;
+    } catch (error) {
+      console.log("[userService] getProductBrandById failed", clean, error);
+      return null;
+    }
   }
 }
 

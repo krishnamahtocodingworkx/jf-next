@@ -1,11 +1,16 @@
-import { createSlice, createAsyncThunk, createSelector, PayloadAction } from "@reduxjs/toolkit";
-import { ingredientService } from "@/services/ingredient-service";
+import { createSlice, createSelector, PayloadAction } from "@reduxjs/toolkit";
 import type {
     IIngredientCatalogRow,
     IIngredientPagination,
     ISupplierIngredient,
 } from "@/interfaces/ingredient";
-import { ingredientToCatalogRow } from "@/redux/ingredient/ingredient-adapter";
+import { ingredientToCatalogRow } from "@/utils/commonFunctions";
+import type { SelectOption } from "@/utils/model";
+import {
+    fetchIngredientsPage,
+    fetchIngredientDetail,
+    fetchIngredientAddFormOptions,
+} from "@/redux/ingredient/ingredients-thunks";
 
 export type IngredientStatusFilter = "all" | "active" | "concept" | "flagged";
 export type IngredientFormFilter = "all" | "powder" | "liquid" | "puree" | "granule" | "crystal";
@@ -31,12 +36,19 @@ export interface IngredientDetailState {
     status: "idle" | "loading" | "succeeded" | "failed";
 }
 
+export type IngredientAddFormOptionsState = {
+    countries: SelectOption[];
+    companies: SelectOption[];
+    status: "idle" | "loading" | "succeeded" | "failed";
+};
+
 export interface IngredientState {
     list: ISupplierIngredient[];
     pagination: IIngredientPagination;
     loadStatus: "idle" | "loading" | "succeeded" | "failed";
     ui: IngredientCatalogUi;
     detail: IngredientDetailState;
+    addFormOptions: IngredientAddFormOptionsState;
 }
 
 const initialPagination: IIngredientPagination = {
@@ -60,30 +72,12 @@ const initialState: IngredientState = {
     loadStatus: "idle",
     ui: { ...initialUi },
     detail: { id: null, data: undefined, status: "idle" },
+    addFormOptions: {
+        countries: [],
+        companies: [],
+        status: "idle",
+    },
 };
-
-export const fetchIngredientsPage = createAsyncThunk(
-    "ingredient/fetchPage",
-    async (_, { getState }) => {
-        const root = getState() as { ingredient: IngredientState };
-        const { pagination, ui } = root.ingredient;
-        const page = Math.max(1, pagination.page || 1);
-        const size = Math.max(1, pagination.size || 12);
-        const search = ui.searchApplied.trim();
-        if (search) {
-            return ingredientService.searchIngredients(search, page, size);
-        }
-        return ingredientService.fetchPaginatedIngredients(page, size);
-    },
-);
-
-export const fetchIngredientDetail = createAsyncThunk(
-    "ingredient/fetchDetail",
-    async (id: string) => {
-        const ingredient = await ingredientService.fetchIngredientById(id);
-        return { id, ingredient };
-    },
-);
 
 const ingredientSlice = createSlice({
     name: "ingredient",
@@ -141,6 +135,17 @@ const ingredientSlice = createSlice({
             .addCase(fetchIngredientDetail.rejected, (state) => {
                 state.detail.status = "failed";
                 state.detail.data = undefined;
+            })
+            .addCase(fetchIngredientAddFormOptions.pending, (state) => {
+                state.addFormOptions.status = "loading";
+            })
+            .addCase(fetchIngredientAddFormOptions.fulfilled, (state, action) => {
+                state.addFormOptions.status = "succeeded";
+                state.addFormOptions.countries = action.payload.countries;
+                state.addFormOptions.companies = action.payload.companies;
+            })
+            .addCase(fetchIngredientAddFormOptions.rejected, (state) => {
+                state.addFormOptions.status = "failed";
             });
     },
 });

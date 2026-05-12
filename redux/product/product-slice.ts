@@ -1,10 +1,24 @@
-import { createSlice, createAsyncThunk, createSelector, PayloadAction } from "@reduxjs/toolkit";
-import { productService } from "@/services/product-service";
+import { createSlice, createSelector, PayloadAction } from "@reduxjs/toolkit";
 import type { IProduct, IProductCatalogRow } from "@/interfaces/product";
-import { apiProductToCatalogRow } from "@/redux/product/product-adapter";
+import type { SelectOption } from "@/utils/model";
+import { apiProductToCatalogRow } from "@/utils/commonFunctions";
+import {
+    fetchProductCatalog,
+    fetchProductDetail,
+    fetchProductAddFormOptions,
+} from "@/redux/product/product-thunks";
 
 export type CatalogFilterA = "all" | "active" | "concept" | "discontinued";
 export type CatalogFilterB = "all" | "bars" | "beverages" | "powders" | "snacks" | "supplements";
+
+export type ProductAddFormOptionsState = {
+    brands: SelectOption[];
+    companies: SelectOption[];
+    manufacturers: SelectOption[];
+    countries: SelectOption[];
+    currencies: SelectOption[];
+    status: "idle" | "loading" | "succeeded" | "failed";
+};
 
 export type ProductState = {
     catalog: {
@@ -25,6 +39,7 @@ export type ProductState = {
         data: IProduct | undefined;
         status: "idle" | "loading" | "succeeded" | "failed";
     };
+    addFormOptions: ProductAddFormOptionsState;
 };
 
 const initialState: ProductState = {
@@ -44,6 +59,14 @@ const initialState: ProductState = {
     detail: {
         id: null,
         data: undefined,
+        status: "idle",
+    },
+    addFormOptions: {
+        brands: [],
+        companies: [],
+        manufacturers: [],
+        countries: [],
+        currencies: [],
         status: "idle",
     },
 };
@@ -66,42 +89,6 @@ function filterBMatches(name: string, filterB: CatalogFilterB): boolean {
             return true;
     }
 }
-
-export const fetchProductCatalog = createAsyncThunk(
-    "product/fetchCatalog",
-    async (_, { getState, rejectWithValue }) => {
-        const state = getState() as { product: ProductState };
-        const { catalog } = state.product;
-        try {
-            const productStatus =
-                catalog.filterA === "active"
-                    ? true
-                    : catalog.filterA === "concept"
-                      ? false
-                      : undefined;
-            const res = await productService.getProductsPage({
-                page: catalog.page,
-                limit: catalog.limit,
-                search: catalog.search.trim() || undefined,
-                productStatus,
-            });
-            console.log("[product] catalog fetched", res.page, "items", res.list.length, "total", res.total);
-            return res;
-        } catch (e) {
-            console.log("[product] catalog fetch failed", e);
-            return rejectWithValue(e);
-        }
-    },
-);
-
-export const fetchProductDetail = createAsyncThunk(
-    "product/fetchDetail",
-    async (id: string) => {
-        const product = await productService.getProductById(id);
-        console.log("[product] detail fetched", id, Boolean(product));
-        return { id, product };
-    },
-);
 
 const productSlice = createSlice({
     name: "product",
@@ -158,6 +145,20 @@ const productSlice = createSlice({
             .addCase(fetchProductDetail.rejected, (state) => {
                 state.detail.status = "failed";
                 state.detail.data = undefined;
+            })
+            .addCase(fetchProductAddFormOptions.pending, (state) => {
+                state.addFormOptions.status = "loading";
+            })
+            .addCase(fetchProductAddFormOptions.fulfilled, (state, action) => {
+                state.addFormOptions.status = "succeeded";
+                state.addFormOptions.brands = action.payload.brands;
+                state.addFormOptions.companies = action.payload.companies;
+                state.addFormOptions.manufacturers = action.payload.manufacturers;
+                state.addFormOptions.countries = action.payload.countries;
+                state.addFormOptions.currencies = action.payload.currencies;
+            })
+            .addCase(fetchProductAddFormOptions.rejected, (state) => {
+                state.addFormOptions.status = "failed";
             });
     },
 });

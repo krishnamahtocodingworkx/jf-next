@@ -12,12 +12,12 @@ import {
     List,
     Plus,
     Search,
-    Sparkles,
     TrendingUp,
+    Zap,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
+import { fetchIngredientsPage } from "@/redux/ingredient/ingredients-thunks";
 import {
-    fetchIngredientsPage,
     selectIngredientCatalogRows,
     setIngredientCategoryFilter,
     setIngredientDisplayMode,
@@ -31,6 +31,7 @@ import {
 } from "@/redux/ingredient/ingredient-slice";
 import IngredientGridCard from "@/components/ingredients/ingredient-grid-card";
 import IngredientListRow from "@/components/ingredients/ingredient-list-row";
+import IngredientAlertsPanel from "@/components/ingredients/ingredient-alerts-panel";
 import AddIngredientPanel from "@/components/ingredients/add-ingredient-panel";
 import IngredientDetailDrawer from "@/components/ingredients/ingredient-detail-drawer";
 import CatalogShimmer from "@/components/common/catalog-shimmer";
@@ -97,14 +98,12 @@ export default function IngredientsPage() {
 
     const counts = useMemo(() => {
         let active = 0;
-        let concept = 0;
         let flagged = 0;
         rows.forEach((row) => {
             if (row.flagged) flagged += 1;
             else if (row.activeProducts > 0) active += 1;
-            else concept += 1;
         });
-        return { active, concept, flagged };
+        return { active, flagged };
     }, [rows]);
 
     const totalCount = ingredient.pagination.total || rows.length;
@@ -112,97 +111,78 @@ export default function IngredientsPage() {
     const isLoading = ingredient.loadStatus === "loading";
     const isFailed = ingredient.loadStatus === "failed";
 
+    const activeBarPct = totalCount
+        ? Math.min(100, (counts.active / Math.max(1, totalCount)) * 100)
+        : 0;
+
     return (
         <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white rounded-xl border border-slate-200 p-5">
-                    <div className="flex items-center gap-2 mb-4">
-                        <Bell className="h-4 w-4 text-slate-400" />
-                        <h3 className="text-sm font-semibold text-slate-700">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+                <div className="bg-white rounded-xl border border-slate-200 p-4">
+                    <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                            <Bell className="h-3.5 w-3.5 text-slate-400" />
                             Ingredient Actions
                         </h3>
                     </div>
-                    <div className="space-y-2.5">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm text-slate-600">Total Items</span>
-                            <span className="text-sm font-semibold text-slate-800">
-                                {totalCount}
-                            </span>
+                    <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-xs">
+                            <span className="text-slate-600">Notifications Pending</span>
+                            <span className="font-semibold text-slate-800">0</span>
                         </div>
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm text-slate-600">Flagged (page)</span>
-                            <span className="text-sm font-semibold text-red-600">
-                                {counts.flagged}
-                            </span>
+                        <div className="flex items-center justify-between text-xs">
+                            <span className="text-slate-600">Actions Pending</span>
+                            <span className="font-semibold text-slate-800">0</span>
                         </div>
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm text-slate-600">Concept (page)</span>
-                            <span className="text-sm font-semibold text-amber-600">
-                                {counts.concept}
-                            </span>
+                        <div className="flex items-center justify-between text-xs">
+                            <span className="text-slate-600">Flagged Ingredients</span>
+                            <span className="font-semibold text-red-600">{counts.flagged}</span>
                         </div>
                     </div>
-                    <div className="mt-4">
-                        <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                            <div
-                                className="h-full bg-emerald-500 rounded-full transition-all"
-                                style={{
-                                    width: `${
-                                        rows.length
-                                            ? (counts.active / Math.max(1, rows.length)) * 100
-                                            : 0
-                                    }%`,
-                                }}
-                            />
-                        </div>
-                        <p className="text-xs text-slate-500 mt-1.5">
-                            {counts.active}/{rows.length || 0} active on this page
-                        </p>
+                    <div className="mt-2 h-1 bg-slate-100 rounded-full">
+                        <div
+                            className="h-1 bg-green-500 rounded-full transition-all"
+                            style={{ width: `${activeBarPct}%` }}
+                        />
                     </div>
+                    <p className="text-[10px] text-slate-500 mt-1">
+                        {counts.active}/{totalCount} active
+                    </p>
                 </div>
 
                 <div
-                    className="rounded-xl p-5 text-white relative overflow-hidden"
+                    className="rounded-xl p-4 text-white flex items-center justify-between"
                     style={{
                         background: "linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)",
                     }}
                 >
-                    <div className="absolute top-4 right-4 opacity-20">
-                        <Leaf className="h-20 w-20" />
+                    <div>
+                        <p className="text-blue-200 text-[10px] font-medium mb-0.5">
+                            Active Ingredients
+                        </p>
+                        <p className="text-3xl font-bold">{counts.active}</p>
+                        <p className="text-blue-200 text-[10px] mt-0.5">Across all products</p>
+                        <div className="flex items-center gap-1 mt-1.5 text-[10px] text-green-300 font-medium">
+                            <TrendingUp className="h-2.5 w-2.5" />
+                            +12% this period
+                        </div>
                     </div>
-                    <p className="text-sm font-medium text-blue-100">Active Ingredients</p>
-                    <p className="text-4xl font-bold mt-1">{counts.active}</p>
-                    <p className="text-sm text-blue-100 mt-1">In your current view</p>
-                    <div className="flex items-center gap-1 mt-2 text-sm text-blue-100">
-                        <TrendingUp className="h-3.5 w-3.5" />
-                        <span className="font-medium">Live from API</span>
-                    </div>
+                    <Leaf className="h-10 w-10 text-blue-300 opacity-50" />
                 </div>
 
-                <div className="bg-linear-to-br from-emerald-500 to-green-600 rounded-xl p-5 text-white relative overflow-hidden">
-                    <div className="absolute top-4 right-4 opacity-20">
-                        <Sparkles className="h-20 w-20" />
-                    </div>
-                    <p className="text-sm font-medium text-emerald-100">Concept Ingredients</p>
-                    <p className="text-4xl font-bold mt-1">{counts.concept}</p>
-                    <p className="text-sm text-emerald-100 mt-1">In development</p>
-                    <div className="flex items-center gap-1 mt-2 text-sm text-emerald-100">
-                        <TrendingUp className="h-3.5 w-3.5" />
-                        <span className="font-medium">Live from API</span>
-                    </div>
-                </div>
+                <IngredientAlertsPanel />
             </div>
 
-            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                <div className="flex flex-col gap-3 p-4 border-b border-slate-100 md:flex-row md:items-center md:justify-between">
-                    <div className="flex items-center gap-3">
+            <div className="bg-white rounded-xl border border-slate-200">
+                <div className="flex items-center justify-between gap-3 p-4 border-b border-slate-100 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap">
                         <h2 className="text-base font-semibold text-slate-800">All Ingredients</h2>
-                        <span className="px-2 py-0.5 text-xs bg-slate-100 text-slate-600 rounded-full font-medium">
+                        <span className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
                             {totalCount} items
                         </span>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                         <div className="relative">
                             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                             <input
@@ -259,11 +239,7 @@ export default function IngredientsPage() {
                         <button
                             type="button"
                             onClick={() => setShowFilters((v) => !v)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-lg transition-colors ${
-                                showFilters
-                                    ? "border-slate-900 bg-slate-900 text-white"
-                                    : "border-slate-200 hover:bg-slate-50"
-                            }`}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
                         >
                             <Filter className="h-3.5 w-3.5" />
                             Filters
@@ -326,7 +302,33 @@ export default function IngredientsPage() {
                     </div>
                 )}
 
-                <div className="p-4">
+                {ingredient.ui.displayMode === "list" &&
+                    !isLoading &&
+                    !isFailed &&
+                    rows.length > 0 && (
+                        <div className="hidden md:grid grid-cols-[auto_1fr_auto] gap-4 px-4 py-2 bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                            <span className="w-9" />
+                            <span>Ingredient</span>
+                            <div className="flex items-center gap-6 pr-16">
+                                <span className="w-14 text-center">Nutrition</span>
+                                <span className="w-14 text-center">Sustain.</span>
+                                <span className="w-14 text-center">Cost</span>
+                                <span className="w-20 text-right">Price/kg</span>
+                                <span className="w-16 text-center">Products</span>
+                            </div>
+                        </div>
+                    )}
+
+                <div
+                    className={
+                        ingredient.ui.displayMode === "grid" ||
+                        isLoading ||
+                        isFailed ||
+                        rows.length === 0
+                            ? "p-4"
+                            : ""
+                    }
+                >
                     {isLoading && (
                         <CatalogShimmer
                             viewMode={ingredient.ui.displayMode}
@@ -350,7 +352,7 @@ export default function IngredientsPage() {
                         !isFailed &&
                         rows.length > 0 &&
                         ingredient.ui.displayMode === "grid" && (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {rows.map((row) => (
                                     <IngredientGridCard
                                         key={row.id}
@@ -368,7 +370,7 @@ export default function IngredientsPage() {
                         !isFailed &&
                         rows.length > 0 &&
                         ingredient.ui.displayMode === "list" && (
-                            <div className="bg-white rounded-lg border border-slate-100 overflow-hidden">
+                            <div>
                                 {rows.map((row) => (
                                     <IngredientListRow
                                         key={row.id}
@@ -384,8 +386,8 @@ export default function IngredientsPage() {
                 </div>
 
                 {totalPages > 1 && (
-                    <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
-                        <p className="text-xs text-slate-500">
+                    <div className="p-4 border-t border-slate-100 flex items-center justify-between">
+                        <p className="text-sm text-slate-500">
                             Page {ingredient.pagination.page} of {totalPages}
                         </p>
                         <div className="flex items-center gap-1">
@@ -412,6 +414,19 @@ export default function IngredientsPage() {
                         </div>
                     </div>
                 )}
+            </div>
+
+            <div className="bg-linear-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100 p-5 flex items-start gap-4">
+                <div className="p-3 bg-blue-100 rounded-lg shrink-0">
+                    <Zap className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                    <h3 className="font-semibold text-slate-800 mb-1">Quick Tip</h3>
+                    <p className="text-sm text-slate-600">
+                        Monitor ingredient alerts for supply chain issues, price changes, and quality
+                        score updates. Set up notifications to stay ahead of potential disruptions.
+                    </p>
+                </div>
             </div>
 
             <AddIngredientPanel

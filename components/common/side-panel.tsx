@@ -8,6 +8,8 @@ type SidePanelProps = {
     onClose: () => void;
     title: string;
     icon?: React.ReactNode;
+    /** Classes for the icon container (default: blue product style). */
+    iconWrapperClassName?: string;
     width?: string;
     children: React.ReactNode;
     footer?: React.ReactNode;
@@ -19,6 +21,7 @@ export default function SidePanel({
     onClose,
     title,
     icon,
+    iconWrapperClassName = "p-2 bg-blue-100 rounded-lg",
     width = "max-w-2xl",
     children,
     footer,
@@ -44,7 +47,9 @@ export default function SidePanel({
                 <div className="flex items-center justify-between p-6 border-b border-slate-200">
                     <div className="flex items-center gap-3">
                         {icon && (
-                            <div className="p-2 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <div
+                                className={`${iconWrapperClassName} flex items-center justify-center`}
+                            >
                                 {icon}
                             </div>
                         )}

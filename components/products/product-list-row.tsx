@@ -11,12 +11,13 @@ type ProductListRowProps = {
 
 export default function ProductListRow({ product, onView }: ProductListRowProps) {
     const status: "active" | "concept" = product.product_status ? "active" : "concept";
+    console.log("[ProductListRow]", product.id);
     return (
         <div
             className="flex items-center gap-4 px-4 py-3.5 hover:bg-slate-50 transition-colors cursor-pointer border-b border-slate-100 last:border-0 group"
             onClick={onView}
         >
-            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-100 to-blue-50 border border-blue-200 flex items-center justify-center shrink-0">
+            <div className="h-10 w-10 rounded-lg bg-linear-to-br from-blue-100 to-blue-50 border border-blue-200 flex items-center justify-center shrink-0">
                 <Package className="h-5 w-5 text-blue-500" />
             </div>
 
@@ -25,7 +26,7 @@ export default function ProductListRow({ product, onView }: ProductListRowProps)
                 <p className="text-xs text-slate-500">{product.subline}</p>
             </div>
 
-            <div className="hidden md:flex items-center gap-6">
+            <div className="flex items-center gap-6 shrink-0">
                 <div className="text-center w-16">
                     <p className="text-sm font-semibold text-slate-700">{product.nutrition}</p>
                     <p className="text-xs text-slate-400">Nutrition</p>

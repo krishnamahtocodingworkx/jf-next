@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Leaf, Save, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Leaf, Save } from "lucide-react";
 import SidePanel from "@/components/common/side-panel";
 import {
     ingredientService,
@@ -9,6 +9,9 @@ import {
     type AddIngredientFormValues,
 } from "@/services/ingredient-service";
 import { notifyApiSuccessToast } from "@/utils/showToast";
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
+import { fetchIngredientAddFormOptions } from "@/redux/ingredient/ingredients-thunks";
+import { getErrorMessage, isValidMongoObjectId } from "@/utils/commonFunctions";
 
 type AddIngredientPanelProps = {
     open: boolean;
@@ -52,10 +55,22 @@ export default function AddIngredientPanel({
     onClose,
     onCreated,
 }: AddIngredientPanelProps) {
+    const dispatch = useAppDispatch();
+    const profile = useAppSelector((s) => s.user.details);
+    const addForm = useAppSelector((s) => s.ingredient.addFormOptions);
     const [values, setValues] = useState<AddIngredientFormValues>(getInitialValues());
     const [submitting, setSubmitting] = useState(false);
     const [errors, setErrors] = useState<Partial<Record<keyof AddIngredientFormValues, string>>>({});
     const [serverError, setServerError] = useState("");
+
+    useEffect(() => {
+        if (!open) return;
+        console.log("[AddIngredientPanel] open — fetch add form options");
+        void dispatch(fetchIngredientAddFormOptions());
+    }, [open, dispatch]);
+
+    const countrySelectValue =
+        addForm.countries.find((c) => c.label === values.country.trim())?.value ?? "";
 
     const setField = <K extends keyof AddIngredientFormValues>(
         key: K,
@@ -68,6 +83,9 @@ export default function AddIngredientPanel({
         const next: typeof errors = {};
         if (!values.jfDisplayName.trim()) next.jfDisplayName = "JF display name is required";
         if (!values.name.trim()) next.name = "Name is required";
+        if (values.company_id.trim() && !isValidMongoObjectId(values.company_id)) {
+            next.company_id = "Select a company from the list, or leave blank to use your profile company.";
+        }
         setErrors(next);
         return Object.keys(next).length === 0;
     };
@@ -85,7 +103,7 @@ export default function AddIngredientPanel({
         setServerError("");
         setSubmitting(true);
         try {
-            const payload = buildAddIngredientPayload(values, null);
+            const payload = buildAddIngredientPayload(values, profile as Record<string, unknown> | null);
             console.log("[AddIngredientPanel] submit", {
                 jfDisplayName: payload.jfDisplayName,
                 name: payload.name,
@@ -96,9 +114,7 @@ export default function AddIngredientPanel({
             resetAndClose();
         } catch (e) {
             console.log("[AddIngredientPanel] submit failed", e);
-            const message =
-                (e as { message?: string })?.message || "Failed to add ingredient. Try again.";
-            setServerError(message);
+            setServerError(getErrorMessage(e, "Failed to add ingredient. Try again."));
         } finally {
             setSubmitting(false);
         }
@@ -110,27 +126,18 @@ export default function AddIngredientPanel({
             onClose={resetAndClose}
             title="Add Ingredient"
             icon={<Leaf className="h-5 w-5 text-green-600" />}
+            iconWrapperClassName="p-2 bg-green-100 rounded-lg"
             width="max-w-2xl"
             footer={
-                <>
-                    <button
-                        type="button"
-                        onClick={resetAndClose}
-                        className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-slate-600 hover:text-slate-900 rounded-lg"
-                    >
-                        <X className="h-4 w-4" />
-                        Cancel
-                    </button>
-                    <button
-                        type="button"
-                        onClick={handleSubmit}
-                        disabled={submitting}
-                        className="flex items-center gap-2 px-6 py-2.5 bg-emerald-500 text-white text-sm font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                        <Save className="h-4 w-4" />
-                        {submitting ? "Saving..." : "Save Ingredient"}
-                    </button>
-                </>
+                <button
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={submitting}
+                    className="flex items-center gap-2 px-6 py-2.5 bg-emerald-500 text-white text-sm font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                    <Save className="h-4 w-4" />
+                    {submitting ? "Saving..." : "Save Ingredient"}
+                </button>
             }
         >
             <div className="space-y-6">
@@ -144,13 +151,28 @@ export default function AddIngredientPanel({
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">
                         Select company
                     </label>
-                    <input
-                        type="text"
+                    <select
                         value={values.company_id}
                         onChange={(e) => setField("company_id", e.target.value)}
-                        placeholder="Company id"
-                        className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    />
+                        disabled={addForm.status === "loading"}
+                        className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm disabled:opacity-60 ${
+                            errors.company_id ? "border-red-300" : "border-slate-200"
+                        }`}
+                    >
+                        <option value="">
+                            {addForm.status === "loading"
+                                ? "Loading companies…"
+                                : "Use profile company (default)"}
+                        </option>
+                        {addForm.companies.map((o) => (
+                            <option key={o.value} value={o.value}>
+                                {o.label}
+                            </option>
+                        ))}
+                    </select>
+                    {errors.company_id && (
+                        <p className="text-xs text-red-600 mt-1">{errors.company_id}</p>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
@@ -228,17 +250,30 @@ export default function AddIngredientPanel({
                         <label className="block text-sm font-medium text-slate-700 mb-1.5">
                             Country
                         </label>
-                        <input
-                            type="text"
-                            value={values.country}
-                            onChange={(e) => setField("country", e.target.value)}
-                            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                        />
+                        <select
+                            value={countrySelectValue}
+                            onChange={(e) => {
+                                const v = e.target.value;
+                                const opt = addForm.countries.find((c) => c.value === v);
+                                setField("country", opt?.label ?? v);
+                            }}
+                            disabled={addForm.status === "loading"}
+                            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm disabled:opacity-60"
+                        >
+                            <option value="">
+                                {addForm.status === "loading" ? "Loading countries…" : "Select country"}
+                            </option>
+                            {addForm.countries.map((o) => (
+                                <option key={o.value} value={o.value}>
+                                    {o.label}
+                                </option>
+                            ))}
+                        </select>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
-                    <div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="min-w-0">
                         <label className="block text-sm font-medium text-slate-700 mb-1.5">
                             Serving size
                         </label>
@@ -247,24 +282,24 @@ export default function AddIngredientPanel({
                             value={values.servingSize}
                             onChange={(e) => setField("servingSize", e.target.value)}
                             placeholder="e.g. 100g"
-                            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            className="w-full min-w-0 px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                         />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                         <label className="block text-sm font-medium text-slate-700 mb-1.5">
                             Price
                         </label>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 min-w-0">
                             <input
                                 type="number"
                                 value={values.price}
                                 onChange={(e) => setField("price", e.target.value)}
-                                className="flex-1 px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                className="min-w-0 flex-1 px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                             />
                             <select
                                 value={values.priceUnit}
                                 onChange={(e) => setField("priceUnit", e.target.value)}
-                                className="w-20 px-2 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                className="shrink-0 w-24 px-2 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                             >
                                 <option>kg</option>
                                 <option>g</option>
@@ -273,18 +308,18 @@ export default function AddIngredientPanel({
                             </select>
                         </div>
                     </div>
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                            Storage condition
-                        </label>
-                        <input
-                            type="text"
-                            value={values.storageCondition}
-                            onChange={(e) => setField("storageCondition", e.target.value)}
-                            placeholder="Cool, dry place"
-                            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                        />
-                    </div>
+                </div>
+                <div className="min-w-0">
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                        Storage condition
+                    </label>
+                    <input
+                        type="text"
+                        value={values.storageCondition}
+                        onChange={(e) => setField("storageCondition", e.target.value)}
+                        placeholder="Cool, dry place"
+                        className="w-full min-w-0 px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
