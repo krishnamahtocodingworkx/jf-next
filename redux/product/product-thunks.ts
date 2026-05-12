@@ -92,11 +92,11 @@ export const fetchProductAddFormOptions = createAsyncThunk(
                 ),
             ].slice(0, 20);
             const fetched: { value: string; label: string }[] = [];
-            for (const pid of productIds) {
-                const b = await userService.getProductBrandById(pid);
-                const n = b ? normalizeBrandManufacturerRowToOption(b) : null;
-                if (n) fetched.push(n);
-            }
+            // for (const pid of productIds) {
+            //     const b = await userService.getProductBrandById(pid);
+            //     const n = b ? normalizeBrandManufacturerRowToOption(b) : null;
+            //     if (n) fetched.push(n);
+            // }
             brands = dedupeSelectOptionsByValue(fetched);
             console.log("[product] add form brands from productBrand API", brands.length);
         }
