@@ -112,14 +112,32 @@ class ProductService {
 
     async getProductById(id: string): Promise<IProduct | undefined> {
         try {
-            const { data } = await api.get(ENDPOINTS.PRODUCTS.BY_ID(id));
-            const inner = (data?.data ?? data) as Record<string, unknown> | IProduct | undefined;
-            const payload =
-                inner && typeof inner === "object" && "data" in inner && (inner as Record<string, unknown>).data !== undefined
-                    ? (inner as Record<string, unknown>).data
-                    : inner;
-            console.log("[productService] getProductById", id, Boolean(payload));
-            return payload as IProduct | undefined;
+            const { data } = await api.get(ENDPOINTS.PRODUCTS.PRODUCT_DETAIL(id));
+            const inner = (data?.data ?? data) as Record<string, unknown> | undefined;
+            if (!inner || typeof inner !== "object" || Array.isArray(inner)) {
+                console.log("[productService] getProductById empty envelope", id);
+                return undefined;
+            }
+            const serving = inner["Serving Size"];
+            const merged = {
+                ...inner,
+                id,
+                _id: id,
+                name: String(inner.name ?? inner.productName ?? "").trim() || "Product",
+                nutritionScore: this.toNum(inner.Nutrition ?? inner.nutritionScore),
+                sustainabilityScore: this.toNum(inner.Sustainability ?? inner.sustainabilityScore),
+                costScore: this.toNum(inner.Cost ?? inner.costScore ?? inner.cost),
+                retailCost: this.toNum(inner.retailCost),
+                version: inner.version as IProduct["version"],
+                ingredients: Array.isArray(inner.ingredients)
+                    ? (inner.ingredients as IProduct["ingredients"])
+                    : undefined,
+                serving_size: typeof serving === "number" || typeof serving === "string" ? serving : undefined,
+                date_created: inner.dateCreated ?? inner.date_created,
+                fulfilmentDate: inner.fulfilmentDate ?? inner.fulfilment_date,
+            } as IProduct;
+            console.log("[productService] getProductById", id, true);
+            return merged;
         } catch (e) {
             console.log("[productService] getProductById failed", e);
             handleApiError(e, "Get Product");

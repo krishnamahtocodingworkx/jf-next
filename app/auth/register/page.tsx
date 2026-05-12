@@ -14,7 +14,7 @@ import { companyService } from "@/services/company-service";
 import { userService } from "@/services/user-service";
 import { REGISTER_INITIAL_VALUES } from "@/utils/initialValues";
 import { AUTH_STRINGS } from "@/utils/strings";
-import { AUTH_CONSTANTS, USER_ROLES } from "@/utils/constants";
+import { USER_ROLES } from "@/utils/constants";
 import { visibleFormikFieldError } from "@/utils/commonFunctions";
 import { registerSchema } from "@/utils/validationSchema";
 
@@ -35,6 +35,7 @@ export default function RegisterPage() {
         ]);
         setCompanyTypes(types);
         setCountries(normalizedCountries);
+        console.log("[auth] register company types loaded", types.length);
       } catch (error) {
         console.log("[auth] register options fetch failed", error);
       }

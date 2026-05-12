@@ -15,6 +15,12 @@ export default function ProductDetailPage() {
     const dispatch = useAppDispatch();
     const id = String(params?.id ?? "").trim();
     const detail = useAppSelector((s) => s.product.detail);
+    const catalogListMatch = useAppSelector((s) =>
+        s.product.catalog.list.find((row) => {
+            const r = row as Record<string, unknown>;
+            return String(r._id ?? r.id ?? "").trim() === id;
+        }),
+    );
 
     useEffect(() => {
         if (!id) return;
@@ -27,9 +33,20 @@ export default function ProductDetailPage() {
     }, [dispatch, id]);
 
     const catalogRow = useMemo(() => {
-        if (!detail.data) return null;
-        return apiProductToCatalogRow(detail.data as Record<string, unknown>, 0);
-    }, [detail.data]);
+        if (detail.status !== "succeeded" || !detail.data) return null;
+        const fromDetail = detail.data as Record<string, unknown>;
+        const fromList = catalogListMatch as Record<string, unknown> | undefined;
+        const merged: Record<string, unknown> = {
+            ...fromList,
+            ...fromDetail,
+            _id: id,
+            id,
+            name: String(fromDetail.name ?? fromList?.name ?? "Product").trim() || "Product",
+            brand: fromDetail.brand ?? fromList?.brand,
+            product_status: fromDetail.product_status ?? fromList?.product_status ?? fromList?.productStatus,
+        };
+        return apiProductToCatalogRow(merged, 0);
+    }, [detail.status, detail.data, catalogListMatch, id]);
 
     if (!id) {
         return (

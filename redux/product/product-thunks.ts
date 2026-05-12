@@ -47,9 +47,13 @@ export const fetchProductCatalog = createAsyncThunk(
 
 export const fetchProductDetail = createAsyncThunk(
     "product/fetchDetail",
-    async (id: string) => {
+    async (id: string, { rejectWithValue }) => {
         const product = await productService.getProductById(id);
-        console.log("[product] detail fetched", id, Boolean(product));
+        if (!product) {
+            console.log("[product] detail not found", id);
+            return rejectWithValue("NOT_FOUND");
+        }
+        console.log("[product] detail fetched", id, true);
         return { id, product };
     },
 );

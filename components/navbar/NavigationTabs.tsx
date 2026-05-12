@@ -20,7 +20,7 @@ export default function NavigationTabs() {
             {mainNav.map((item) => {
                 const Icon = item.icon
 
-                const isActive = pathname === item.path
+                const isActive = pathname.includes(item.path)
 
                 return (
                     <button
@@ -28,8 +28,8 @@ export default function NavigationTabs() {
                         type="button"
                         onClick={() => handleNavigate(item.path)}
                         className={`relative flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors border-b-2 ${isActive
-                                ? "border-slate-800 text-slate-900"
-                                : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+                            ? "border-slate-800 text-slate-900"
+                            : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
                             }`}
                     >
                         <Icon className="h-4 w-4" />
@@ -43,7 +43,7 @@ export default function NavigationTabs() {
                 {secondaryNav.map((item) => {
                     const Icon = item.icon
 
-                    const isActive = pathname === item.path
+                    const isActive = pathname.includes(item.path)
 
                     return (
                         <button
@@ -51,8 +51,8 @@ export default function NavigationTabs() {
                             type="button"
                             onClick={() => handleNavigate(item.path)}
                             className={`flex items-center gap-1.5 px-3 py-3 text-sm font-medium whitespace-nowrap transition-colors border-b-2 ${isActive
-                                    ? "border-slate-800 text-slate-900"
-                                    : "border-transparent text-slate-400 hover:text-slate-600"
+                                ? "border-slate-800 text-slate-900"
+                                : "border-transparent text-slate-400 hover:text-slate-600"
                                 }`}
                         >
                             <Icon className="h-4 w-4" />

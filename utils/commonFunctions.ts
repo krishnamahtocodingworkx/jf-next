@@ -436,16 +436,19 @@ export function apiProductToCatalogRow(raw: Record<string, unknown>, index: numb
   const subline = cat ? `${brandName} · ${cat}` : `${brandName}`;
 
   const nutrition =
-    catalogReadNumber(raw, ["nutritionScore", "nutrition_score", "nutrition"]) ?? 78 + (h % 15);
+    catalogReadNumber(raw, ["nutritionScore", "nutrition_score", "nutrition", "Nutrition"]) ??
+    78 + (h % 15);
   const sustain =
     catalogReadNumber(raw, [
       "sustainabilityScore",
       "sustainability_score",
       "sustain_score",
       "sustain",
+      "Sustainability",
     ]) ?? 76 + (h % 16);
   const cost =
-    catalogReadNumber(raw, ["costScore", "cost_score", "cost", "commercial_score"]) ?? 74 + (h % 18);
+    catalogReadNumber(raw, ["costScore", "cost_score", "cost", "commercial_score", "Cost"]) ??
+    74 + (h % 18);
 
   const overallFromApi = catalogReadNumber(raw, [
     "overallScore",
@@ -461,7 +464,14 @@ export function apiProductToCatalogRow(raw: Record<string, unknown>, index: numb
       : Math.min(100, Math.round((nutrition + sustain + cost) / 3));
 
   const priceNum =
-    catalogReadNumber(raw, ["retail_price", "price", "unit_price", "selling_price", "markup"]) ??
+    catalogReadNumber(raw, [
+      "retail_price",
+      "price",
+      "unit_price",
+      "selling_price",
+      "markup",
+      "retailCost",
+    ]) ??
     2.5 + (h % 80) / 10;
 
   const trendPct =
