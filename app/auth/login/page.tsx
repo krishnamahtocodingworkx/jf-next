@@ -7,11 +7,12 @@ import { AuthInput } from "@/components/auth/auth-input";
 import { AuthSubmitButton } from "@/components/auth/auth-submit-button";
 import { routes } from "@/utils/routes";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
-import { loginUser } from "@/redux/user/user-thunks";
+// import { loginUser } from "@/redux/user/user-thunks";
 import { LOGIN_INITIAL_VALUES } from "@/utils/initialValues";
 import { AUTH_STRINGS } from "@/utils/strings";
 import { visibleFormikFieldError } from "@/utils/commonFunctions";
 import { loginSchema } from "@/utils/validationSchema";
+import { manualLogin } from "@/redux/user/user-thunks";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -27,13 +28,10 @@ export default function LoginPage() {
         validationSchema={loginSchema}
         validateOnMount={false}
         onSubmit={async (values) => {
-          try {
-            await dispatch(loginUser(values)).unwrap();
-            console.log("[auth] Login success", values.email);
-            router.push(routes.APP_HOME);
-          } catch {
-            /* Toasts shown in loginUser thunk */
-          }
+          await dispatch(manualLogin(values)).unwrap().then((res) => {
+            console.log("response login :", res);
+            router.push(routes.OVERVIEW);
+          })
         }}
       >
         {(formik) => (

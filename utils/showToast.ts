@@ -31,7 +31,7 @@ export function notifyApiSuccessToast(payload: unknown) {
   if (msg) {
     console.log("[auth] success toast", msg);
     SUCCESS_TOAST(msg);
-  } else if (process.env.NODE_ENV === "development") {
+  } else {
     console.log("[toast] no backend message in response; toast skipped", payload);
   }
 }

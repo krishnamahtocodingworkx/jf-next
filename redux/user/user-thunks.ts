@@ -10,28 +10,76 @@ import {
   notifyResetPasswordApiError,
 } from "@/utils/showErrorToast";
 import { interceptorHandledNetworkOrTimeout } from "@/utils/service";
+import { fireBaseLogEvent } from "@/lib/firebase";
 
-export const loginUser = createAsyncThunk(
-  "user/loginUser",
-  async (payload: { email: string; password: string }, { rejectWithValue }) => {
+// export const loginUser = createAsyncThunk(
+//   "user/loginUser",
+//   async (payload: { email: string; password: string }, { rejectWithValue }) => {
+//     try {
+//       console.log("[auth] loginUser thunk", payload.email);
+//       const response = await userService.login(payload);
+
+//       storage.setItem("access_token", response.accessToken || "");
+//       storage.setItem("refresh_token", response.refreshToken || "");
+//       storage.setItem("idToken", response.idToken || "");
+
+//       notifyApiSuccessToast(response);
+//       return response;
+//     } catch (error) {
+//       if (!interceptorHandledNetworkOrTimeout(error)) {
+//         notifyLoginApiError(error);
+//       }
+//       const message = extractApiErrorMessage(error) ?? "";
+//       return rejectWithValue(message);
+//     }
+//   },
+// );
+export const manualLogin = createAsyncThunk(
+  "auth/manualLogin",
+  async (
+    { email, password }: { email: string; password: string },
+    { rejectWithValue }
+  ) => {
     try {
-      console.log("[auth] loginUser thunk", payload.email);
-      const response = await userService.login(payload);
+      const firebaseRes = await userService.loginWithFirebase(email, password);
 
-      storage.setItem("access_token", response.accessToken || "");
-      storage.setItem("refresh_token", response.refreshToken || "");
-      storage.setItem("idToken", response.idToken || "");
-
-      notifyApiSuccessToast(response);
-      return response;
-    } catch (error) {
-      if (!interceptorHandledNetworkOrTimeout(error)) {
-        notifyLoginApiError(error);
+      //  MFA CASE
+      if (firebaseRes.mfaRequired) {
+        return {
+          mfaRequired: true,
+          resolver: firebaseRes.resolver,
+          phoneNumber: firebaseRes.phoneNumber
+        };
       }
-      const message = extractApiErrorMessage(error) ?? "";
-      return rejectWithValue(message);
+
+      // Step 2: Backend login
+      const apiRes = await userService.login(email, password);
+      console.log("login response in thunk:", apiRes);
+
+      //  store tokens
+      storage.setItem("access_token", apiRes.accessToken);
+      storage.setItem("refresh_token", apiRes.refreshToken);
+      storage.setItem("idToken", apiRes.idToken);
+
+      // 📊 analytics
+      fireBaseLogEvent("login", {
+        method: "email_password",
+        email
+      });
+
+      return {
+        ...apiRes,
+        mfaRequired: false
+      };
+
+    } catch (error: any) { 
+      console.log("manualLogin error thunk:", error);
+
+      return rejectWithValue(
+        error?.message || "Login failed"
+      );
     }
-  },
+  }
 );
 
 export const registerUser = createAsyncThunk(

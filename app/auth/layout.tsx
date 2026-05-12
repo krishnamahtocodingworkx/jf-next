@@ -1,9 +1,12 @@
+import PublicGuard from "@/components/auth/public-guard";
+
 export default function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
+    <PublicGuard>
     <div className="flex min-h-screen">
       <div className="relative hidden w-1/2 overflow-hidden bg-white lg:flex">
         <svg
@@ -42,5 +45,6 @@ export default function AuthLayout({
         </div>
       </div>
     </div>
+    </PublicGuard>
   );
 }

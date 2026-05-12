@@ -8,7 +8,7 @@ export function showErrorToast(error: unknown) {
   if (message) {
     console.log("[auth] error toast", message, error);
     SHOW_ERROR_TOAST(message);
-  } else if (process.env.NODE_ENV === "development") {
+  } else {
     console.log("[toast] no extractable error message; toast skipped", error);
   }
 }

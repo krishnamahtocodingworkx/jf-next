@@ -1,7 +1,7 @@
 import { api } from "@/services/api";
 import { ENDPOINTS } from "@/utils/endpoints";
 import { auth } from "@/lib/firebase";
-import { attachBackendSuccessMessage, normalizeCountryOptions } from "@/utils/commonFunctions";
+import { attachBackendSuccessMessage, normalizeCountryOptions, unwrapApiListData, normalizeEntitySelectOptions } from "@/utils/commonFunctions";
 import {
   signInWithCustomToken,
   signInWithEmailAndPassword,
@@ -9,8 +9,9 @@ import {
   confirmPasswordReset,
   sendEmailVerification,
 } from "firebase/auth";
+import { notifyApiSuccessToast } from "@/utils/showToast";
+import type { SelectOption } from "@/utils/model";
 
-type LoginPayload = { email: string; password: string };
 type RegisterPayload = {
   firstName: string;
   lastName: string;
@@ -27,25 +28,58 @@ type RegisterPayload = {
 };
 
 class UserService {
-  async login(payload: LoginPayload) {
-    const { data } = await api.post(ENDPOINTS.AUTH.LOGIN, payload);
-    const loginData = data?.data ?? data;
-    const accessToken = loginData?.accessToken;
+  //  Step 1: Firebase login (check MFA)
+  async loginWithFirebase(email: string, password: string) {
+    try {
+      const res = await signInWithEmailAndPassword(auth, email, password);
 
-    if (!accessToken) {
-      throw new Error("Login response does not include access token");
+      return {
+        user: res.user,
+        mfaRequired: false
+      };
+    } catch (error: any) {
+      console.log("loginWithFirebase error:", error);
+
+      switch (error.code) {
+        case "auth/user-not-found":
+          throw new Error("User does not exist. Please register first.");
+
+        case "auth/wrong-password":
+          throw new Error("Incorrect password");
+
+        case "auth/invalid-email":
+          throw new Error("Invalid email address");
+
+        case "auth/too-many-requests":
+          throw new Error("Too many attempts. Try again later.");
+
+        case "auth/multi-factor-auth-required":
+          return {
+            mfaRequired: true,
+            resolver: error.resolver,
+            phoneNumber:
+              error?.customData?._tokenResponse?.mfaInfo?.[0]?.phoneInfo
+          };
+
+        default:
+          throw new Error(error?.message || "Something went wrong");
+      }
     }
+  }
 
-    const firebaseCredential = await signInWithCustomToken(auth, accessToken);
-    const idToken = await firebaseCredential.user.getIdToken();
-
-    console.log("[auth] login API + firebase token success", payload.email);
-
-    const withBackendMessage = attachBackendSuccessMessage(data, loginData);
-
+  //  Step 2: Backend login + Firebase custom token
+  async login(email: string, password: string) {
+    const { data } = await api.post(ENDPOINTS.AUTH.LOGIN, {
+      email,
+      password
+    });
+    const accessToken = data.data?.accessToken;
+    const res = await signInWithCustomToken(auth, accessToken);
+    const idToken = await res.user?.getIdToken();
+    notifyApiSuccessToast(data);
     return {
-      ...withBackendMessage,
-      idToken,
+      ...data.data,
+      idToken
     };
   }
 
@@ -91,6 +125,65 @@ class UserService {
     await confirmPasswordReset(auth, code, password);
     console.log("[auth] firebase password reset success", code);
     return true;
+  }
+
+  async getBrands(): Promise<SelectOption[]> {
+    try {
+      const { data } = await api.get(ENDPOINTS.USER.BRANDS);
+      const rows = unwrapApiListData(data?.data ?? data);
+      const opts = normalizeEntitySelectOptions(rows);
+      console.log("[userService] getBrands", opts.length);
+      return opts;
+    } catch (error) {
+      console.log("[userService] getBrands failed", error);
+      return [];
+    }
+  }
+
+  async getCompanies(): Promise<SelectOption[]> {
+    try {
+      const { data } = await api.get(ENDPOINTS.COMPANY.LIST_FOR_SELECT);
+      const rows = unwrapApiListData(data?.data ?? data);
+      const opts = normalizeEntitySelectOptions(rows);
+      console.log("[userService] getCompanies", opts.length);
+      return opts;
+    } catch (error) {
+      console.log("[userService] getCompanies failed", error);
+      return [];
+    }
+  }
+
+  async getManufacturers(): Promise<SelectOption[]> {
+    try {
+      const { data } = await api.get(ENDPOINTS.PRODUCTS.MANUFACTURERS);
+      const rows = unwrapApiListData(data?.data ?? data);
+      const opts = normalizeEntitySelectOptions(rows);
+      console.log("[userService] getManufacturers", opts.length);
+      return opts;
+    } catch (error) {
+      console.log("[userService] getManufacturers failed", error);
+      return [];
+    }
+  }
+
+  /** Brand object for a product id (`GET /api/v1/productBrand/get-product-brand/:id`). */
+  async getProductBrandById(productId: string): Promise<Record<string, unknown> | null> {
+    const clean = String(productId || "").trim();
+    if (!clean) return null;
+    try {
+      const { data } = await api.get(ENDPOINTS.PRODUCT_BRAND.GET_BY_ID(clean));
+      const nested = (data as Record<string, unknown> | undefined)?.data as
+        | Record<string, unknown>
+        | undefined;
+      const row = (nested?.data ?? nested ?? null) as Record<string, unknown> | null;
+      const usable =
+        row && typeof row === "object" && Object.keys(row).length > 0 ? row : null;
+      console.log("[userService] getProductBrandById", clean, Boolean(usable));
+      return usable;
+    } catch (error) {
+      console.log("[userService] getProductBrandById failed", clean, error);
+      return null;
+    }
   }
 }
 
