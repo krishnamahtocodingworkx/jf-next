@@ -14,9 +14,7 @@ type DetailPageShimmerProps = {
 
 export default function DetailPageShimmer({ variant }: DetailPageShimmerProps) {
     useEffect(() => {
-        if (process.env.NODE_ENV === "development") {
             console.log("[DetailPageShimmer] mount", variant);
-        }
     }, [variant]);
 
     if (variant === "ingredient") {
