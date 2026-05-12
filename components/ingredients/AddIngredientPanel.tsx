@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Leaf, Save } from "lucide-react";
-import SidePanel from "@/components/common/side-panel";
+import SidePanel from "@/components/common/SidePanel";
 import {
     ingredientService,
     buildAddIngredientPayload,
@@ -162,7 +162,7 @@ export default function AddIngredientPanel({
                         <option value="">
                             {addForm.status === "loading"
                                 ? "Loading companies…"
-                                : "Use profile company (default)"}
+                                : "Use profile company"}
                         </option>
                         {addForm.companies.map((o) => (
                             <option key={o.value} value={o.value}>

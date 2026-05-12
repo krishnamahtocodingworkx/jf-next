@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, DollarSign, Leaf, Package, Star, TrendingDown, TrendingUp, Zap } from "lucide-react";
+import { DollarSign, Leaf, Package, Star, TrendingDown, TrendingUp, Zap } from "lucide-react";
 import type { IIngredientCatalogRow } from "@/interfaces/ingredient";
 
 type IngredientGridCardProps = {
@@ -21,7 +21,9 @@ export default function IngredientGridCard({ ingredient, onView }: IngredientGri
 
     const trendUp = ingredient.trendPct > 0 && ingredient.trendPositive;
     const trendDown = ingredient.trendPct > 0 && !ingredient.trendPositive;
+    /* Mock: supplier audit banner — hidden per product request
     const alertText = ingredient.flagged ? "Supplier audit scheduled" : null;
+    */
 
     console.log("[IngredientGridCard]", ingredient.id, ingredient.name);
 
@@ -56,12 +58,12 @@ export default function IngredientGridCard({ ingredient, onView }: IngredientGri
                 </div>
             </div>
 
-            {alertText && (
+            {/* {alertText && (
                 <div className="mb-3 flex items-center gap-1.5 text-xs text-red-600 bg-red-50 rounded-lg px-2.5 py-1.5">
                     <AlertTriangle className="h-3 w-3 shrink-0" />
                     <span className="truncate">{alertText}</span>
                 </div>
-            )}
+            )} */}
 
             <div className="grid grid-cols-3 gap-2 mb-3">
                 {(

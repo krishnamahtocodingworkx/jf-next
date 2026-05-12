@@ -212,7 +212,7 @@ export function normalizeEntitySelectOptions(rows: Record<string, unknown>[]): S
     .filter((o) => o.value && o.label);
 }
 
-/** Merge API company options with `profile.company` / `profile.companies` (JourneyFoodsDashboardUpgraded). */
+/** Merge API company options with `profile.company` / `profile.companies` . */
 export function mergeCompanySources(
   primary: SelectOption[],
   profile: Record<string, unknown> | null | undefined,
@@ -252,7 +252,7 @@ export function mergeCompanyFromUserProfile(
   return mergeCompanySources(options, profile);
 }
 
-/** Deep unwrap for list payloads (Add Product / JourneyFoodsDashboardUpgraded). */
+/** Deep unwrap for list payloads (Add Product ). */
 export function unwrapListPayloadDeep(payload: unknown): Record<string, unknown>[] {
   if (payload == null) return [];
   if (Array.isArray(payload)) return payload as Record<string, unknown>[];

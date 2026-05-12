@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
     Bell,
     ChevronLeft,
@@ -21,17 +22,18 @@ import {
     setCatalogDisplayMode,
     setCatalogFilterA,
     setCatalogFilterB,
+    setCatalogLimit,
     setCatalogPage,
     setCatalogSearchApplied,
     type CatalogFilterA,
     type CatalogFilterB,
 } from "@/redux/product/product-slice";
-import ProductGridCard from "@/components/products/product-grid-card";
-import ProductListRow from "@/components/products/product-list-row";
-import AddProductPanel from "@/components/products/add-product-panel";
-import ProductDetailDrawer from "@/components/products/product-detail-drawer";
-import CatalogShimmer from "@/components/common/catalog-shimmer";
-import type { IProductCatalogRow } from "@/interfaces/product";
+import ProductGridCard from "@/components/products/ProductGridCard";
+import ProductListRow from "@/components/products/ProductListRow";
+import AddProductPanel from "@/components/products/AddProductPanel";
+import CatalogShimmer from "@/components/common/CatalogShimmer";
+
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;
 
 const STATUS_PILLS: Array<{ id: CatalogFilterA; label: string }> = [
     { id: "all", label: "All" },
@@ -49,6 +51,7 @@ const CATEGORY_PILLS: Array<{ id: CatalogFilterB; label: string }> = [
 ];
 
 export default function ProductsPage() {
+    const router = useRouter();
     const dispatch = useAppDispatch();
     const catalog = useAppSelector((s) => s.product.catalog);
     const rows = useAppSelector(selectCatalogDisplayRows);
@@ -56,7 +59,6 @@ export default function ProductsPage() {
     const [localSearch, setLocalSearch] = useState(catalog.search);
     const [showFilters, setShowFilters] = useState(false);
     const [showAddPanel, setShowAddPanel] = useState(false);
-    const [selectedProduct, setSelectedProduct] = useState<IProductCatalogRow | null>(null);
 
     useEffect(() => {
         console.log("[ProductsPage] fetch trigger", {
@@ -65,7 +67,7 @@ export default function ProductsPage() {
             search: catalog.search,
         });
         dispatch(fetchProductCatalog());
-    }, [dispatch, catalog.page, catalog.filterA, catalog.search]);
+    }, [dispatch, catalog.page, catalog.limit, catalog.filterA, catalog.search]);
 
     useEffect(() => {
         const t = setTimeout(() => {
@@ -325,7 +327,7 @@ export default function ProductsPage() {
                                     product={p}
                                     onView={() => {
                                         console.log("[ProductsPage] view", p.id);
-                                        setSelectedProduct(p);
+                                        router.push(`/products/${encodeURIComponent(p.id)}`);
                                     }}
                                 />
                             ))}
@@ -340,7 +342,7 @@ export default function ProductsPage() {
                                     product={p}
                                     onView={() => {
                                         console.log("[ProductsPage] view", p.id);
-                                        setSelectedProduct(p);
+                                        router.push(`/products/${encodeURIComponent(p.id)}`);
                                     }}
                                 />
                             ))}
@@ -348,28 +350,48 @@ export default function ProductsPage() {
                     )}
                 </div>
 
-                {totalPages > 1 && (
-                    <div className="p-4 border-t border-slate-100 flex items-center justify-between">
+                {totalCount > 0 && (
+                    <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <p className="text-sm text-slate-500">
                             Page {catalog.page} of {totalPages}
+                            <span className="text-slate-400"> · </span>
+                            {totalCount} total
                         </p>
-                        <div className="flex items-center gap-1">
-                            <button
-                                type="button"
-                                onClick={() => dispatch(setCatalogPage(catalog.page - 1))}
-                                disabled={catalog.page <= 1}
-                                className="flex items-center justify-center h-8 w-8 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                <ChevronLeft className="h-4 w-4" />
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => dispatch(setCatalogPage(catalog.page + 1))}
-                                disabled={catalog.page >= totalPages}
-                                className="flex items-center justify-center h-8 w-8 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                <ChevronRight className="h-4 w-4" />
-                            </button>
+                        <div className="flex flex-wrap items-center gap-3">
+                            <label className="flex items-center gap-2 text-sm text-slate-600">
+                                <span className="text-slate-500">Per page</span>
+                                <select
+                                    value={catalog.limit}
+                                    onChange={(e) =>
+                                        dispatch(setCatalogLimit(Number(e.target.value)))
+                                    }
+                                    className="pl-2 pr-8 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                >
+                                    {PAGE_SIZE_OPTIONS.map((n) => (
+                                        <option key={n} value={n}>
+                                            {n}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                            <div className="flex items-center gap-1">
+                                <button
+                                    type="button"
+                                    onClick={() => dispatch(setCatalogPage(catalog.page - 1))}
+                                    disabled={catalog.page <= 1}
+                                    className="flex items-center justify-center h-8 w-8 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => dispatch(setCatalogPage(catalog.page + 1))}
+                                    disabled={catalog.page >= totalPages}
+                                    className="flex items-center justify-center h-8 w-8 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <ChevronRight className="h-4 w-4" />
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -382,12 +404,6 @@ export default function ProductsPage() {
                     console.log("[ProductsPage] product created, refetching");
                     dispatch(fetchProductCatalog());
                 }}
-            />
-
-            <ProductDetailDrawer
-                product={selectedProduct}
-                onClose={() => setSelectedProduct(null)}
-                onEdit={() => setShowAddPanel(true)}
             />
         </div>
     );

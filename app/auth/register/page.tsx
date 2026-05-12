@@ -3,10 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Formik } from "formik";
-import { AuthInput } from "@/components/auth/auth-input";
-import { AuthSelect } from "@/components/auth/auth-select";
-import { AuthSubmitButton } from "@/components/auth/auth-submit-button";
-import { AuthSuccessCard } from "@/components/auth/auth-success-card";
+import { AuthInput } from "@/components/auth/AuthInput";
+import { AuthSelect } from "@/components/auth/AuthSelect";
+import { AuthSubmitButton } from "@/components/auth/AuthSubmitButton";
+import { AuthSuccessCard } from "@/components/auth/AuthSuccessCard";
 import { routes } from "@/utils/routes";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { registerUser } from "@/redux/user/user-thunks";

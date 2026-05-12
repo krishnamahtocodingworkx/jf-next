@@ -1,4 +1,4 @@
-/** Minimal supplier-dashboard ingredient row (parity with JourneyFoodsDashboardUpgraded). */
+/** Minimal supplier-dashboard ingredient row . */
 export interface ISupplierIngredient {
     id: string;
     jf_display_name?: string;

@@ -1,6 +1,6 @@
 "use client";
 
-import { LoadingButton } from "@/components/common/loading-button";
+import { LoadingButton } from "@/components/common/LoadingButton";
 
 type AuthSubmitButtonProps = {
   label: string;

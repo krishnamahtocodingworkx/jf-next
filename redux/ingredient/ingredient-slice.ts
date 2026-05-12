@@ -54,7 +54,7 @@ export interface IngredientState {
 const initialPagination: IIngredientPagination = {
     page: 1,
     pages: 1,
-    size: 12,
+    size: 10,
     total: 0,
 };
 
@@ -103,7 +103,11 @@ const ingredientSlice = createSlice({
             state.pagination.page = Math.max(1, action.payload);
         },
         setIngredientPageSize(state, action: PayloadAction<number>) {
-            state.pagination.size = Math.max(1, action.payload);
+            const allowed = [10, 20, 50, 100] as const;
+            const next = allowed.includes(action.payload as (typeof allowed)[number])
+                ? action.payload
+                : state.pagination.size;
+            state.pagination.size = next;
             state.pagination.page = 1;
         },
         clearIngredientDetail(state) {

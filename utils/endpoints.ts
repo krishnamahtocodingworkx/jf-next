@@ -20,7 +20,7 @@ export const ENDPOINTS = {
     BRANDS: `${API}/user/brands/`,
   },
   COMPANY: {
-    /** List companies for selects (Add Product), aligned with JourneyFoodsDashboardUpgraded. */
+    /** List companies for selects (Add Product), */
     LIST_FOR_SELECT: `${API}/companies/`,
   },
   PRODUCT_BRAND: {

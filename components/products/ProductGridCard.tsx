@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertTriangle, DollarSign, Package, Star, TrendingDown, TrendingUp } from "lucide-react";
-import ScoreRing from "@/components/products/score-ring";
+import ScoreRing from "@/components/products/ScoreRing";
 import type { IProductCatalogRow } from "@/interfaces/product";
 
 type ProductGridCardProps = {
@@ -57,6 +57,7 @@ export default function ProductGridCard({ product, onView }: ProductGridCardProp
                 </div>
             </div>
 
+            {/* Mock: catalog tag chips (Omega-3, Vegan, etc.) — hidden per product request
             <div className="flex flex-wrap gap-1.5 mb-4">
                 {product.tags.slice(0, 3).map((tag) => (
                     <span
@@ -67,6 +68,7 @@ export default function ProductGridCard({ product, onView }: ProductGridCardProp
                     </span>
                 ))}
             </div>
+            */}
 
             <div className="flex items-center justify-between pt-3 border-t border-slate-100">
                 <div className="flex items-center gap-1">

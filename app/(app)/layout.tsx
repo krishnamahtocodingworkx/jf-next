@@ -1,6 +1,6 @@
 import Navbar from "@/components/navbar"
 import NavigationTabs from "@/components/navbar/NavigationTabs"
-import AuthGuard from "@/components/auth/auth-guard"
+import AuthGuard from "@/components/auth/AuthGuard"
 
 export default function AppLayout({
     children,
