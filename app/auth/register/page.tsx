@@ -14,7 +14,7 @@ import { companyService } from "@/services/company-service";
 import { userService } from "@/services/user-service";
 import { REGISTER_INITIAL_VALUES } from "@/utils/initialValues";
 import { AUTH_STRINGS } from "@/utils/strings";
-import { AUTH_CONSTANTS } from "@/utils/constants";
+import { AUTH_CONSTANTS, USER_ROLES } from "@/utils/constants";
 import { visibleFormikFieldError } from "@/utils/commonFunctions";
 import { registerSchema } from "@/utils/validationSchema";
 
@@ -85,7 +85,8 @@ export default function RegisterPage() {
                 country: values.country,
                 email: values.email,
                 password: values.password,
-                role: AUTH_CONSTANTS.ROLE_COMPANY_ADMIN,
+                confirmPassword: values.confirmPassword,
+                role: USER_ROLES.COMPANY_ADMIN,
               }),
             ).unwrap();
             console.log("[auth] Register success", values.email);
