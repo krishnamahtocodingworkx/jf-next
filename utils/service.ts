@@ -47,9 +47,7 @@ export function interceptorHandledNetworkOrTimeout(error: unknown): boolean {
 }
 
 const sessionExpireHandler = () => {
-  storage.removeItem("access_token");
-  storage.removeItem("refresh_token");
-  storage.removeItem("idToken");
+  localStorage.clear();
   if (typeof window !== "undefined") {
     window.location.replace(routes.LOGIN);
   }
@@ -59,36 +57,118 @@ const createAxiosInstance = (
   baseURL: string,
   headers: Record<string, string> = {},
 ): AxiosInstance => {
+
+
   const instance = axios.create({
     baseURL,
     timeout: 30000,
     headers,
   });
 
-  instance.interceptors.request.use((config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
-    const token = storage.getItem("idToken");
+  instance.interceptors.request.use(async (config: InternalAxiosRequestConfig): Promise<InternalAxiosRequestConfig> => {
+    const { store } = await import("@/redux/store");
+    const token = store.getState().user.idToken;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    console.log("[api] request", config.method?.toUpperCase(), config.url, token ? "(auth)" : "(anon)");
+
     return config;
   });
 
+  // instance.interceptors.response.use(
+  //   (response: AxiosResponse) => response,
+  //   async (error): Promise<ErrorResponse | AxiosResponse> => {
+  //     const axiosError = error as AxiosError;
+  //     const originalReq = axiosError.config as RetriableConfig | undefined;
+
+  //     if (!axiosError.response) {
+  //       if (axiosError.code === "ECONNABORTED") {
+  //         SHOW_ERROR_TOAST("Request timeout. Please try again.");
+  //         return Promise.reject({
+  //           message: "Request timeout. Please try again.",
+  //           status: STATUS_CODE.timeout,
+  //         });
+  //       }
+  //       SHOW_INTERNET_TOAST();
+  //       return Promise.reject({
+  //         message: "Network error. Please check your internet connection.",
+  //         status: 0,
+  //       });
+  //     }
+
+  //     const body = axiosError.response?.data as unknown;
+  //     const message =
+  //       parseBackendMessageBody(body) ??
+  //       (typeof body === "string" && body.trim() ? body.trim() : undefined) ??
+  //       axiosError.response?.statusText ??
+  //       axiosError.message ??
+  //       SOMETHING_WENT_WRONG;
+
+  //     const status: number = axiosError.response?.status ?? axiosError.status ?? 0;
+  //     const store = await import("@/redux/store");
+  //     const refreshToken = store.store.getState().user.refreshToken;
+  //     const errBody = (body as { detail?: string } | undefined) ?? undefined;
+  //     console.log("refresh token :", refreshToken);
+  //     debugger;
+  //     if (
+  //       status === STATUS_CODE.Unauthorized
+  //       &&
+  //       // originalReq &&
+  //       originalReq &&
+  //       refreshToken
+  //       // errBody?.detail === "INVALID TOKEN"
+  //     ) {
+  //       console.log("inside refresh token")
+  //       debugger;
+  //       // originalReq._retry = true;
+  //       try {
+  //         const res = await axios.post(baseURL + ENDPOINTS.AUTH.REFRESH_TOKEN, {
+  //           refresh_token: refreshToken,
+  //         });
+  //         console.log("refresh token response :", res);
+  //         debugger;
+  //         const accessToken = res.data.data?.accessToken;
+  //         const res2 = await signInWithCustomToken(auth, accessToken);
+  //         const idToken = await res2.user?.getIdToken();
+  //         // save access token
+  //         // save idToken in redux storage
+
+  //         return instance.request(originalReq);
+  //       } catch (refreshError) {
+  //         console.log("[api] refresh token failed", refreshError);
+  //         sessionExpireHandler();
+  //         return Promise.reject({ message, status });
+  //       }
+  //     }
+  //     console.log("outside of refresh token ");
+  //     debugger;
+
+  //     if (status === STATUS_CODE.Unauthorized) {
+  //       sessionExpireHandler();
+  //     }
+
+  //     return Promise.reject({ message, status });
+  //   },
+  // );
   instance.interceptors.response.use(
     (response: AxiosResponse) => response,
+
     async (error): Promise<ErrorResponse | AxiosResponse> => {
       const axiosError = error as AxiosError;
-      const originalReq = axiosError.config as RetriableConfig | undefined;
+      const originalReq = axiosError.config as RetriableConfig;
 
       if (!axiosError.response) {
         if (axiosError.code === "ECONNABORTED") {
           SHOW_ERROR_TOAST("Request timeout. Please try again.");
+
           return Promise.reject({
             message: "Request timeout. Please try again.",
             status: STATUS_CODE.timeout,
           });
         }
+
         SHOW_INTERNET_TOAST();
+
         return Promise.reject({
           message: "Network error. Please check your internet connection.",
           status: 0,
@@ -96,52 +176,128 @@ const createAxiosInstance = (
       }
 
       const body = axiosError.response?.data as unknown;
+
       const message =
         parseBackendMessageBody(body) ??
-        (typeof body === "string" && body.trim() ? body.trim() : undefined) ??
+        (typeof body === "string" && body.trim()
+          ? body.trim()
+          : undefined) ??
         axiosError.response?.statusText ??
         axiosError.message ??
         SOMETHING_WENT_WRONG;
 
-      const status: number = axiosError.response?.status ?? axiosError.status ?? 0;
+      const status =
+        axiosError.response?.status ??
+        axiosError.status ??
+        0;
 
-      const refreshToken = storage.getItem("refresh_token");
-      const errBody = (body as { detail?: string } | undefined) ?? undefined;
+      // =========================
+      // REFRESH TOKEN FLOW
+      // =========================
 
       if (
         status === STATUS_CODE.Unauthorized &&
         originalReq &&
-        !originalReq._retry &&
-        refreshToken &&
-        errBody?.detail === "INVALID TOKEN"
+        !originalReq._retry
       ) {
         originalReq._retry = true;
+
         try {
-          console.log("[api] attempting refresh token flow");
-          const res = await instance.post(ENDPOINTS.AUTH.REFRESH_TOKEN, {
-            refresh_token: refreshToken,
-          });
-          const accessToken = res.data?.data?.accessToken;
-          console.log("access Token :",accessToken);
-          debugger;
-          if (accessToken) storage.setItem("access_token", accessToken);
-          const res2 = await signInWithCustomToken(auth, accessToken);
-          const idToken = await res2.user?.getIdToken();
-          if (idToken) storage.setItem("idToken", idToken);
-          return instance.request(originalReq);
+          const { store } = await import("@/redux/store");
+
+          const state = store.getState();
+
+          const refreshToken = state.user.refreshToken;
+
+          if (!refreshToken) {
+            sessionExpireHandler();
+
+            return Promise.reject({
+              message: "Session expired",
+              status,
+            });
+          }
+
+          // refresh api call
+          const refreshResponse = await axios.post(
+            BASE_URL + ENDPOINTS.AUTH.REFRESH_TOKEN,
+            {
+              refresh_token: refreshToken,
+            }
+          );
+
+          // backend response
+          const newAccessToken =
+            refreshResponse.data.data?.accessToken;
+
+          const newRefreshToken =
+            refreshResponse.data.data?.refreshToken;
+
+          // Firebase login again
+          const firebaseRes = await signInWithCustomToken(
+            auth,
+            newAccessToken
+          );
+
+          const newIdToken =
+            await firebaseRes.user.getIdToken();
+
+          // save storage
+          storage.setItem("access_token", newAccessToken);
+
+          storage.setItem(
+            "refresh_token",
+            newRefreshToken || refreshToken
+          );
+
+          storage.setItem("idToken", newIdToken);
+
+          // update redux
+          const { updateTokens } = await import(
+            "@/redux/user/user-slice"
+          );
+
+          store.dispatch(
+            updateTokens({
+              accessToken: newAccessToken,
+              refreshToken: newRefreshToken,
+              idToken: newIdToken,
+            })
+          );
+
+          // update failed request token
+          originalReq.headers.Authorization = `Bearer ${newIdToken}`;
+
+          // retry request
+          return instance(originalReq);
         } catch (refreshError) {
-          console.log("[api] refresh token failed", refreshError);
+          console.log(
+            "[api] refresh token failed",
+            refreshError
+          );
+
           sessionExpireHandler();
-          return Promise.reject({ message, status });
+
+          return Promise.reject({
+            message: "Session expired",
+            status,
+          });
         }
       }
+
+      // =========================
+      // NORMAL ERROR
+      // =========================
 
       if (status === STATUS_CODE.Unauthorized) {
         sessionExpireHandler();
       }
 
-      return Promise.reject({ message, status });
-    },
+      return Promise.reject({
+        message,
+        status,
+      });
+    }
   );
 
   return instance;

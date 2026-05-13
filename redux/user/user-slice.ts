@@ -29,6 +29,23 @@ const userSlice = createSlice({
       state.details = null;
       state.error = "";
     },
+    updateTokens(
+      state,
+      action: {
+        payload: {
+          accessToken: string;
+          refreshToken?: string;
+          idToken: string;
+        };
+      }
+    ) {
+      state.accessToken = action.payload.accessToken;
+      state.idToken = action.payload.idToken;
+
+      if (action.payload.refreshToken) {
+        state.refreshToken = action.payload.refreshToken;
+      }
+    },
   },
   extraReducers: (builder) => {
     builder.addCase(manualLogin.pending, (state) => {
@@ -87,5 +104,5 @@ const userSlice = createSlice({
   },
 });
 
-export const { logout } = userSlice.actions;
+export const { logout, updateTokens } = userSlice.actions;
 export default userSlice.reducer;
