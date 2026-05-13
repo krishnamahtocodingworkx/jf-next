@@ -7,7 +7,7 @@ import { fetchIngredientDetail } from "@/redux/ingredient/ingredients-thunks";
 import { clearIngredientDetail } from "@/redux/ingredient/ingredient-slice";
 import { ingredientToCatalogRow } from "@/utils/commonFunctions";
 import IngredientDetailDrawer from "@/components/ingredients/IngredientDetailDrawer";
-import CatalogShimmer from "@/components/common/CatalogShimmer";
+import DetailPageShimmer from "@/components/common/DetailPageShimmer";
 
 export default function IngredientDetailPage() {
     const params = useParams<{ id: string }>();
@@ -40,7 +40,7 @@ export default function IngredientDetailPage() {
     }
 
     if (detail.status === "idle" || detail.status === "loading") {
-        return <CatalogShimmer viewMode="grid" count={3} />;
+        return <DetailPageShimmer variant="ingredient" />;
     }
 
     if (detail.status === "failed" || (detail.status === "succeeded" && !catalogRow)) {

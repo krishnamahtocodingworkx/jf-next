@@ -7,7 +7,7 @@ import { fetchProductDetail } from "@/redux/product/product-thunks";
 import { clearProductDetail } from "@/redux/product/product-slice";
 import { apiProductToCatalogRow } from "@/utils/commonFunctions";
 import ProductDetailDrawer from "@/components/products/ProductDetailDrawer";
-import CatalogShimmer from "@/components/common/CatalogShimmer";
+import DetailPageShimmer from "@/components/common/DetailPageShimmer";
 
 export default function ProductDetailPage() {
     const params = useParams<{ id: string }>();
@@ -57,7 +57,7 @@ export default function ProductDetailPage() {
     }
 
     if (detail.status === "idle" || detail.status === "loading") {
-        return <CatalogShimmer viewMode="grid" count={3} />;
+        return <DetailPageShimmer variant="product" />;
     }
 
     if (detail.status === "failed" || (detail.status === "succeeded" && !catalogRow)) {
