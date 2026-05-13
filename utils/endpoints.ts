@@ -5,8 +5,8 @@ export const ENDPOINTS = {
   AUTH: {
     LOGIN: `${API}/users/login`,
     REGISTER: `${API}/users/register`,
-    REFRESH_TOKEN: `${API}/auth/refresh-token`,
-    LOGOUT: `${API}/auth/logout`,
+    REFRESH_TOKEN: `${API}/users/refresh-token`,
+    LOGOUT: `${API}/users/logout`,
   },
   PROFILE: {
     COMPANY_TYPE: `${API}/companyType/company-type-list`,

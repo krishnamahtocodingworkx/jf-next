@@ -9,6 +9,8 @@ import SHOW_ERROR_TOAST, { SHOW_INTERNET_TOAST } from "@/utils/showToast";
 import { storage } from "@/lib/storage";
 import { ENDPOINTS } from "@/utils/endpoints";
 import { routes } from "@/utils/routes";
+import { signInWithCustomToken } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 const SOMETHING_WENT_WRONG = "OOPS! Something went wrong";
 const BASE_URL = ENDPOINTS.BASE_URL || "";
@@ -119,14 +121,13 @@ const createAxiosInstance = (
           const res = await instance.post(ENDPOINTS.AUTH.REFRESH_TOKEN, {
             refresh_token: refreshToken,
           });
-          const payload = (res.data?.data ?? res.data) as {
-            access_token?: string;
-            refresh_token?: string;
-            idToken?: string;
-          };
-          if (payload?.access_token) storage.setItem("access_token", payload.access_token);
-          if (payload?.refresh_token) storage.setItem("refresh_token", payload.refresh_token);
-          if (payload?.idToken) storage.setItem("idToken", payload.idToken);
+          const accessToken = res.data?.data?.accessToken;
+          console.log("access Token :",accessToken);
+          debugger;
+          if (accessToken) storage.setItem("access_token", accessToken);
+          const res2 = await signInWithCustomToken(auth, accessToken);
+          const idToken = await res2.user?.getIdToken();
+          if (idToken) storage.setItem("idToken", idToken);
           return instance.request(originalReq);
         } catch (refreshError) {
           console.log("[api] refresh token failed", refreshError);
