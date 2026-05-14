@@ -36,12 +36,6 @@ export function buildCreateProductPayload(
         (i) => !String((i?.ingredient as { id?: string } | undefined)?.id || "").startsWith("custom:"),
     );
     const unit = String((firstReal?.unit as string | undefined) || "g");
-    const userId = String(
-        (profile?.id as string | undefined) ||
-            (profile?._id as string | undefined) ||
-            (profile?.user_id as string | undefined) ||
-            "",
-    );
     const ingredients = rows
         .filter(
             (i) => !String((i?.ingredient as { id?: string } | undefined)?.id || "").startsWith("custom:"),
@@ -56,9 +50,7 @@ export function buildCreateProductPayload(
             ? String(values.manufacturer).trim()
             : "";
     const brandIdRaw = values.brand_id ? String(values.brand_id).trim() : "";
-    /** Same fallback as JourneyFoodsDashboardUpgraded `buildCreateProductPayload`. */
-    const SAMPLE_BRAND_ID = "69afd4d0651a43cf6774a537";
-    const brandId = isValidMongoObjectId(brandIdRaw) ? brandIdRaw : SAMPLE_BRAND_ID;
+    const brandId = isValidMongoObjectId(brandIdRaw) ? brandIdRaw : "";
     const manufacturerId = isValidMongoObjectId(mfg) ? mfg : null;
     const companyIdRaw = values.company_id
         ? String(values.company_id)
@@ -71,7 +63,6 @@ export function buildCreateProductPayload(
     console.log("[productService] create payload id validation", {
         brandProvided: Boolean(brandIdRaw),
         brandAccepted: Boolean(brandId),
-        brandFallbackUsed: !isValidMongoObjectId(brandIdRaw),
         manufacturerProvided: Boolean(mfg),
         manufacturerAccepted: Boolean(manufacturerId),
         companyProvided: Boolean(companyIdRaw),
@@ -83,7 +74,6 @@ export function buildCreateProductPayload(
         ingredients,
         category: String(values.category || "").trim(),
         brand: brandId,
-        user: userId,
         unit,
         company: companyId,
         muteNotifications: false,
