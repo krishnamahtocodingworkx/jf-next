@@ -1,24 +1,87 @@
 import { createSlice, createSelector, PayloadAction } from "@reduxjs/toolkit";
 import type { IProduct, IProductCatalogRow } from "@/interfaces/product";
 import type { SelectOption } from "@/utils/model";
+import type { ISupplierIngredient, IIngredientPagination } from "@/interfaces/ingredient";
 import { apiProductToCatalogRow } from "@/utils/commonFunctions";
 import {
     fetchProductCatalog,
     fetchProductDetail,
-    fetchProductAddFormOptions,
+    fetchAddProductCompanyTypes,
+    fetchAddProductCategoryBundle,
+    fetchAddProductBrandsByCompanyId,
+    fetchAddProductManufacturersLazy,
+    fetchAddProductCountriesLazy,
+    fetchAddProductCurrenciesLazy,
+    searchAddProductIngredients,
 } from "@/redux/product/product-thunks";
 
 export type CatalogFilterA = "all" | "active" | "concept" | "discontinued";
 export type CatalogFilterB = "all" | "bars" | "beverages" | "powders" | "snacks" | "supplements";
 
-export type ProductAddFormOptionsState = {
-    brands: SelectOption[];
-    companies: SelectOption[];
-    manufacturers: SelectOption[];
-    countries: SelectOption[];
-    currencies: SelectOption[];
+export type AddPanelListField = {
     status: "idle" | "loading" | "succeeded" | "failed";
+    items: SelectOption[];
 };
+
+export type AddPanelCategoryBundle = {
+    status: "idle" | "loading" | "succeeded" | "failed";
+    productTypes: string[];
+    subCategories: string[];
+};
+
+export type AddPanelIngredientSearch = {
+    status: "idle" | "loading" | "succeeded" | "failed";
+    term: string;
+    page: number;
+    list: ISupplierIngredient[];
+    pagination: IIngredientPagination;
+};
+
+export type AddPanelBrandsState = {
+    status: "idle" | "loading" | "succeeded" | "failed";
+    items: SelectOption[];
+    enrichment: "idle" | "loading" | "done";
+    /** Latest in-flight company id; ignore fulfilled/rejected when it does not match. */
+    pendingCompanyId: string | null;
+};
+
+export type ProductAddPanelState = {
+    companyTypes: AddPanelListField;
+    categoryBundles: Record<string, AddPanelCategoryBundle>;
+    brands: AddPanelBrandsState;
+    manufacturers: AddPanelListField;
+    countries: AddPanelListField;
+    currencies: AddPanelListField;
+    ingredients: AddPanelIngredientSearch;
+};
+
+const emptyListField = (): AddPanelListField => ({
+    status: "idle",
+    items: [],
+});
+
+const emptyBrandsState = (): AddPanelBrandsState => ({
+    status: "idle",
+    items: [],
+    enrichment: "idle",
+    pendingCompanyId: null,
+});
+
+const initialAddPanel = (): ProductAddPanelState => ({
+    companyTypes: emptyListField(),
+    categoryBundles: {},
+    brands: emptyBrandsState(),
+    manufacturers: emptyListField(),
+    countries: emptyListField(),
+    currencies: emptyListField(),
+    ingredients: {
+        status: "idle",
+        term: "",
+        page: 1,
+        list: [],
+        pagination: { page: 1, pages: 1, size: 20, total: 0 },
+    },
+});
 
 export type ProductState = {
     catalog: {
@@ -39,7 +102,7 @@ export type ProductState = {
         data: IProduct | undefined;
         status: "idle" | "loading" | "succeeded" | "failed";
     };
-    addFormOptions: ProductAddFormOptionsState;
+    addPanel: ProductAddPanelState;
 };
 
 const initialState: ProductState = {
@@ -61,14 +124,7 @@ const initialState: ProductState = {
         data: undefined,
         status: "idle",
     },
-    addFormOptions: {
-        brands: [],
-        companies: [],
-        manufacturers: [],
-        countries: [],
-        currencies: [],
-        status: "idle",
-    },
+    addPanel: initialAddPanel(),
 };
 
 function filterBMatches(name: string, filterB: CatalogFilterB): boolean {
@@ -123,6 +179,25 @@ const productSlice = createSlice({
         clearProductDetail: (state) => {
             state.detail = { id: null, data: undefined, status: "idle" };
         },
+        resetAddProductPanel: (state) => {
+            state.addPanel = initialAddPanel();
+            console.log("[product] addPanel reset");
+        },
+        clearAddProductIngredientSearch: (state) => {
+            state.addPanel.ingredients = {
+                status: "idle",
+                term: "",
+                page: 1,
+                list: [],
+                pagination: { page: 1, pages: 1, size: 20, total: 0 },
+            };
+        },
+        clearAddProductBrandOptions: (state) => {
+            state.addPanel.brands.items = [];
+            state.addPanel.brands.status = "idle";
+            state.addPanel.brands.enrichment = "idle";
+            state.addPanel.brands.pendingCompanyId = null;
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -154,19 +229,115 @@ const productSlice = createSlice({
                 state.detail.status = "failed";
                 state.detail.data = undefined;
             })
-            .addCase(fetchProductAddFormOptions.pending, (state) => {
-                state.addFormOptions.status = "loading";
+            .addCase(fetchAddProductCompanyTypes.pending, (state) => {
+                state.addPanel.companyTypes.status = "loading";
             })
-            .addCase(fetchProductAddFormOptions.fulfilled, (state, action) => {
-                state.addFormOptions.status = "succeeded";
-                state.addFormOptions.brands = action.payload.brands;
-                state.addFormOptions.companies = action.payload.companies;
-                state.addFormOptions.manufacturers = action.payload.manufacturers;
-                state.addFormOptions.countries = action.payload.countries;
-                state.addFormOptions.currencies = action.payload.currencies;
+            .addCase(fetchAddProductCompanyTypes.fulfilled, (state, action) => {
+                state.addPanel.companyTypes.status = "succeeded";
+                state.addPanel.companyTypes.items = action.payload;
             })
-            .addCase(fetchProductAddFormOptions.rejected, (state) => {
-                state.addFormOptions.status = "failed";
+            .addCase(fetchAddProductCompanyTypes.rejected, (state) => {
+                state.addPanel.companyTypes.status = "failed";
+            })
+            .addCase(fetchAddProductCategoryBundle.pending, (state, action) => {
+                const cat = action.meta.arg;
+                const prev = state.addPanel.categoryBundles[cat] ?? {
+                    status: "idle" as const,
+                    productTypes: [],
+                    subCategories: [],
+                };
+                state.addPanel.categoryBundles[cat] = {
+                    ...prev,
+                    status: "loading",
+                };
+            })
+            .addCase(fetchAddProductCategoryBundle.fulfilled, (state, action) => {
+                const { category, productTypes, subCategories } = action.payload;
+                state.addPanel.categoryBundles[category] = {
+                    status: "succeeded",
+                    productTypes,
+                    subCategories,
+                };
+            })
+            .addCase(fetchAddProductCategoryBundle.rejected, (state, action) => {
+                const cat = action.meta.arg;
+                state.addPanel.categoryBundles[cat] = {
+                    status: "failed",
+                    productTypes: [],
+                    subCategories: [],
+                };
+            })
+            .addCase(fetchAddProductBrandsByCompanyId.pending, (state, action) => {
+                state.addPanel.brands.status = "loading";
+                state.addPanel.brands.enrichment = "loading";
+                state.addPanel.brands.pendingCompanyId = action.meta.arg;
+                state.addPanel.brands.items = [];
+            })
+            .addCase(fetchAddProductBrandsByCompanyId.fulfilled, (state, action) => {
+                if (state.addPanel.brands.pendingCompanyId !== action.meta.arg) {
+                    return;
+                }
+                state.addPanel.brands.pendingCompanyId = null;
+                state.addPanel.brands.items = action.payload;
+                state.addPanel.brands.status = "succeeded";
+                state.addPanel.brands.enrichment = "done";
+            })
+            .addCase(fetchAddProductBrandsByCompanyId.rejected, (state, action) => {
+                if (state.addPanel.brands.pendingCompanyId !== action.meta.arg) {
+                    return;
+                }
+                state.addPanel.brands.pendingCompanyId = null;
+                state.addPanel.brands.items = [];
+                state.addPanel.brands.status = "failed";
+                state.addPanel.brands.enrichment = "done";
+            })
+            .addCase(fetchAddProductManufacturersLazy.pending, (state) => {
+                state.addPanel.manufacturers.status = "loading";
+            })
+            .addCase(fetchAddProductManufacturersLazy.fulfilled, (state, action) => {
+                state.addPanel.manufacturers.status = "succeeded";
+                state.addPanel.manufacturers.items = action.payload;
+            })
+            .addCase(fetchAddProductManufacturersLazy.rejected, (state) => {
+                state.addPanel.manufacturers.status = "failed";
+            })
+            .addCase(fetchAddProductCountriesLazy.pending, (state) => {
+                state.addPanel.countries.status = "loading";
+            })
+            .addCase(fetchAddProductCountriesLazy.fulfilled, (state, action) => {
+                state.addPanel.countries.status = "succeeded";
+                state.addPanel.countries.items = action.payload;
+            })
+            .addCase(fetchAddProductCountriesLazy.rejected, (state) => {
+                state.addPanel.countries.status = "failed";
+            })
+            .addCase(fetchAddProductCurrenciesLazy.pending, (state) => {
+                state.addPanel.currencies.status = "loading";
+            })
+            .addCase(fetchAddProductCurrenciesLazy.fulfilled, (state, action) => {
+                state.addPanel.currencies.status = "succeeded";
+                state.addPanel.currencies.items = action.payload;
+            })
+            .addCase(fetchAddProductCurrenciesLazy.rejected, (state) => {
+                state.addPanel.currencies.status = "failed";
+            })
+            .addCase(searchAddProductIngredients.pending, (state) => {
+                state.addPanel.ingredients.status = "loading";
+            })
+            .addCase(searchAddProductIngredients.fulfilled, (state, action) => {
+                const { term, page, list, pagination } = action.payload;
+                state.addPanel.ingredients.status = "succeeded";
+                state.addPanel.ingredients.term = term;
+                state.addPanel.ingredients.page = page;
+                state.addPanel.ingredients.pagination = pagination;
+                if (page <= 1) {
+                    state.addPanel.ingredients.list = list;
+                } else {
+                    state.addPanel.ingredients.list = state.addPanel.ingredients.list.concat(list);
+                }
+            })
+            .addCase(searchAddProductIngredients.rejected, (state) => {
+                state.addPanel.ingredients.status = "failed";
             });
     },
 });
@@ -179,6 +350,9 @@ export const {
     setCatalogLimit,
     setCatalogDisplayMode,
     clearProductDetail,
+    resetAddProductPanel,
+    clearAddProductIngredientSearch,
+    clearAddProductBrandOptions,
 } = productSlice.actions;
 
 export default productSlice.reducer;

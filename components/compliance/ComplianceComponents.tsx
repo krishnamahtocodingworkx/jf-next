@@ -28,8 +28,8 @@ import {
   getComplianceStatusColor,
   getSeverityColor,
   getComplianceLabel,
-  regions,
 } from "@/lib/compliance-data"
+import { COMPLIANCE_MARKET_REGION_ORDER, COMPLIANCE_REGION_DISPLAY } from "@/utils/enum"
 
 // ─── Compliance Badge ─────────────────────────────────────────────────────────
 
@@ -177,17 +177,22 @@ interface RegionTagProps {
 }
 
 export function RegionTag({ regionCode, showFlag = true, size = "md" }: RegionTagProps) {
-  const region = regions.find((r) => r.code === regionCode)
-  if (!region) return null
+  const meta = COMPLIANCE_REGION_DISPLAY[regionCode]
+  const chipClass = `inline-flex items-center gap-1 bg-slate-100 text-slate-700 rounded-full border border-slate-200 ${
+    size === "sm" ? "px-2 py-0.5 text-xs" : "px-2.5 py-1 text-xs"
+  }`
+  if (!meta) {
+    return (
+      <span className={chipClass}>
+        <span className="font-medium text-slate-600">{regionCode}</span>
+      </span>
+    )
+  }
 
   return (
-    <span
-      className={`inline-flex items-center gap-1 bg-slate-100 text-slate-700 rounded-full border border-slate-200 ${
-        size === "sm" ? "px-2 py-0.5 text-xs" : "px-2.5 py-1 text-xs"
-      }`}
-    >
-      {showFlag && <span>{region.flag}</span>}
-      {region.code}
+    <span className={chipClass}>
+      {showFlag && <span>{meta.flag}</span>}
+      {regionCode}
     </span>
   )
 }
@@ -422,6 +427,7 @@ export function MarketsSelector({
 
   const getRegionSelectionState = (region: Region): "all" | "some" | "none" => {
     if (selectedRegions.includes(region.code)) return "all"
+    if (region.countries.length === 0) return "none"
     const selectedCountryCount = region.countries.filter((c) =>
       selectedCountries.includes(c.code)
     ).length
@@ -462,7 +468,14 @@ export function MarketsSelector({
 
       {/* Region list */}
       <div className="space-y-2">
-        {regions.map((region) => {
+        {COMPLIANCE_MARKET_REGION_ORDER.map((code) => {
+          const meta = COMPLIANCE_REGION_DISPLAY[code]
+          const region: Region = {
+            code,
+            name: meta?.name ?? code,
+            flag: meta?.flag ?? "",
+            countries: [],
+          }
           const selectionState = getRegionSelectionState(region)
           const isExpanded = expandedRegions.includes(region.code)
 
@@ -470,17 +483,21 @@ export function MarketsSelector({
             <div key={region.code} className="rounded-xl border border-slate-200 overflow-hidden">
               {/* Region header */}
               <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors">
-                <button
-                  type="button"
-                  onClick={() => toggleRegionExpand(region.code)}
-                  className="p-1 hover:bg-slate-200 rounded transition-colors"
-                >
-                  {isExpanded ? (
-                    <ChevronDown className="h-4 w-4 text-slate-500" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4 text-slate-500" />
-                  )}
-                </button>
+                {region.countries.length > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => toggleRegionExpand(region.code)}
+                    className="p-1 hover:bg-slate-200 rounded transition-colors"
+                  >
+                    {isExpanded ? (
+                      <ChevronDown className="h-4 w-4 text-slate-500" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-slate-500" />
+                    )}
+                  </button>
+                ) : (
+                  <span className="w-7" aria-hidden />
+                )}
                 <button
                   type="button"
                   onClick={() => onRegionToggle(region.code)}
@@ -498,12 +515,14 @@ export function MarketsSelector({
                 <span className="text-lg">{region.flag}</span>
                 <span className="font-medium text-slate-800">{region.name}</span>
                 <span className="text-xs text-slate-500">
-                  ({region.countries.length} countries)
+                  {region.countries.length > 0
+                    ? `(${region.countries.length} countries)`
+                    : "(region)"}
                 </span>
               </div>
 
               {/* Country list */}
-              {isExpanded && (
+              {isExpanded && region.countries.length > 0 && (
                 <div className="px-4 py-2 bg-white grid grid-cols-2 md:grid-cols-3 gap-2">
                   {region.countries.map((country) => (
                     <button

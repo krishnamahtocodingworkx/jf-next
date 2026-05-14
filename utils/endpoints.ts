@@ -17,14 +17,14 @@ export const ENDPOINTS = {
   USER: {
     PROFILE: `${API}/users/`,
     PERMISSIONS: `${API}/user/access-permissions`,
-    BRANDS: `${API}/user/brands/`,
   },
   COMPANY: {
     /** List companies for selects (Add Product), */
     LIST_FOR_SELECT: `${API}/companies/`,
   },
   PRODUCT_BRAND: {
-    GET_BY_ID: (productId: string) => `${API}/productBrand/get-product-brand/${productId}`,
+    /** Backend uses this path with company id (Add Product) or product id depending on context. */
+    GET_BY_ID: (id: string) => `${API}/productBrand/get-product-brand/${id}`,
   },
   INGREDIENT: {
     GET_INGREDIENT_LIST: `${API}/ingredient/get-ingredient-list`,
@@ -51,6 +51,9 @@ export const ENDPOINTS = {
   },
   CURRENCY: {
     LIST: `${API}/currency/currency-list`,
+  },
+  PRODUCT_TYPE: {
+    CATEGORY_LIST: `${API}/productType/category-list`,
   },
   ANALYTICS: {
     INGREDIENT_USAGE: `${API}/ingredients/usage/`,

@@ -13,7 +13,8 @@ import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { fetchIngredientAddFormOptions } from "@/redux/ingredient/ingredients-thunks";
 import { getErrorMessage, isValidMongoObjectId } from "@/utils/commonFunctions";
 import { ChevronSelect } from "@/components/common/ChevronSelect";
-import { cn } from "@/lib/utils";
+import { clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 type AddIngredientPanelProps = {
     open: boolean;
@@ -157,9 +158,11 @@ export default function AddIngredientPanel({
                         value={values.company_id}
                         onChange={(e) => setField("company_id", e.target.value)}
                         disabled={addForm.status === "loading"}
-                        className={cn(
-                            "py-2.5",
-                            errors.company_id ? "border-red-300 focus:ring-red-200" : "",
+                        className={twMerge(
+                            clsx(
+                                "py-2.5",
+                                errors.company_id ? "border-red-300 focus:ring-red-200" : "",
+                            ),
                         )}
                     >
                         <option value="">

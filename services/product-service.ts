@@ -56,7 +56,9 @@ export function buildCreateProductPayload(
             ? String(values.manufacturer).trim()
             : "";
     const brandIdRaw = values.brand_id ? String(values.brand_id).trim() : "";
-    const brandId = isValidMongoObjectId(brandIdRaw) ? brandIdRaw : "";
+    /** Same fallback as JourneyFoodsDashboardUpgraded `buildCreateProductPayload`. */
+    const SAMPLE_BRAND_ID = "69afd4d0651a43cf6774a537";
+    const brandId = isValidMongoObjectId(brandIdRaw) ? brandIdRaw : SAMPLE_BRAND_ID;
     const manufacturerId = isValidMongoObjectId(mfg) ? mfg : null;
     const companyIdRaw = values.company_id
         ? String(values.company_id)
@@ -66,6 +68,15 @@ export function buildCreateProductPayload(
                   "",
           );
     const companyId = isValidMongoObjectId(companyIdRaw) ? companyIdRaw : "";
+    console.log("[productService] create payload id validation", {
+        brandProvided: Boolean(brandIdRaw),
+        brandAccepted: Boolean(brandId),
+        brandFallbackUsed: !isValidMongoObjectId(brandIdRaw),
+        manufacturerProvided: Boolean(mfg),
+        manufacturerAccepted: Boolean(manufacturerId),
+        companyProvided: Boolean(companyIdRaw),
+        companyAccepted: Boolean(companyId),
+    });
     return {
         name: String(values.name || "").trim(),
         description: String(values.notes || "").trim(),
@@ -98,7 +109,17 @@ class ProductService {
         if (Array.isArray(p)) return p as Record<string, unknown>[];
         if (!p || typeof p !== "object") return [];
         const obj = p as Record<string, unknown>;
-        const candidates = [obj.list, obj.items, obj.results, obj.rows, obj.data];
+        const candidates = [
+            obj.list,
+            obj.items,
+            obj.results,
+            obj.rows,
+            obj.data,
+            obj.products,
+            obj.productList,
+            obj.content,
+            obj.records,
+        ];
         for (const c of candidates) {
             if (Array.isArray(c)) return c as Record<string, unknown>[];
         }
@@ -173,8 +194,33 @@ class ProductService {
             if (params.search) query.search = params.search;
             const { data } = await api.get(ENDPOINTS.PRODUCTS.GET_PRODUCT_LIST, { params: query });
             const inner = this.unwrapAny(data) as Record<string, unknown> | undefined;
-            const rows = this.unwrapList(inner);
-            const list = rows.map((r) => normalizeProductListItem(r));
+            let rows = this.unwrapList(inner);
+            if (rows.length === 0) {
+                const loose = unwrapApiListData((data as Record<string, unknown> | undefined)?.data ?? data ?? inner);
+                if (loose.length) rows = loose;
+            }
+            let list = rows.map((r) => normalizeProductListItem(r as Record<string, unknown>));
+
+            if (list.length === 0) {
+                try {
+                    const { data: legacy } = await api.get(ENDPOINTS.PRODUCTS.LIST, { params: { page, limit } });
+                    const innerL = this.unwrapAny(legacy) as Record<string, unknown> | undefined;
+                    let rowsL = this.unwrapList(innerL);
+                    if (rowsL.length === 0) {
+                        const looseL = unwrapApiListData(
+                            (legacy as Record<string, unknown> | undefined)?.data ?? legacy ?? innerL,
+                        );
+                        if (looseL.length) rowsL = looseL;
+                    }
+                    if (rowsL.length > 0) {
+                        list = rowsL.map((r) => normalizeProductListItem(r as Record<string, unknown>));
+                        console.log("[productService] getProductsPage using /user/products/ fallback", list.length);
+                    }
+                } catch (fallbackErr) {
+                    console.log("[productService] getProductsPage user products fallback skipped", fallbackErr);
+                }
+            }
+
             const pagination = (inner?.pagination ??
                 inner?.meta ??
                 inner?.pageInfo ??
@@ -262,6 +308,45 @@ class ProductService {
         } catch (e) {
             handleApiError(e, "New Version");
             throw e;
+        }
+    }
+
+    /** `GET /api/v1/productType/category-list?category=Beverages` */
+    async getCategoryListBundle(category: string): Promise<{
+        productTypes: string[];
+        subCategories: string[];
+    }> {
+        const cat = String(category || "").trim();
+        if (!cat) return { productTypes: [], subCategories: [] };
+        try {
+            const { data } = await api.get(ENDPOINTS.PRODUCT_TYPE.CATEGORY_LIST, {
+                params: { category: cat },
+            });
+            const body = (data ?? {}) as Record<string, unknown>;
+            let list: Record<string, unknown>[] = [];
+            if (Array.isArray(body.data)) {
+                list = body.data as Record<string, unknown>[];
+            } else {
+                list = unwrapApiListData(body.data ?? body) as Record<string, unknown>[];
+            }
+            const first =
+                (list.find((row) => String(row.category ?? "") === cat) as Record<string, unknown> | undefined) ??
+                (list[0] as Record<string, unknown> | undefined);
+            const productTypes = Array.isArray(first?.productTypes)
+                ? (first.productTypes as unknown[]).map((x) => String(x))
+                : [];
+            const subCategories = Array.isArray(first?.subCategories)
+                ? (first.subCategories as unknown[]).map((x) => String(x))
+                : [];
+            console.log("[productService] getCategoryListBundle", cat, {
+                productTypes: productTypes.length,
+                subCategories: subCategories.length,
+            });
+            return { productTypes, subCategories };
+        } catch (e) {
+            console.log("[productService] getCategoryListBundle failed", cat, e);
+            handleApiError(e, "Product category list");
+            return { productTypes: [], subCategories: [] };
         }
     }
 

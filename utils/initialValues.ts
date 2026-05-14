@@ -1,4 +1,5 @@
 import type {
+  AddProductFormValues,
   ForgotPasswordFormValues,
   LoginFormValues,
   RecoveryPasswordFormValues,
@@ -32,4 +33,31 @@ export const REGISTER_INITIAL_VALUES: RegisterFormValues = {
   email: "",
   password: "",
   confirmPassword: "",
+};
+
+export const ADD_PRODUCT_INITIAL_VALUES: AddProductFormValues = {
+  company: "",
+  category: "",
+  productType: "",
+  subcategory: "",
+  sku: "",
+  name: "",
+  brand: "",
+  flavor: "",
+  manufacturer: "",
+  dateCreated: "",
+  fulfilmentDate: "",
+  servingSize: "0",
+  servingUnit: "g",
+  status: "active",
+  guavaEnabled: true,
+  hasAdditives: false,
+  guavaScore: "",
+  upcCode: "",
+  cost: "0",
+  retailCost: "0",
+  country: "",
+  currency: "",
+  objectives: [],
+  notes: "",
 };
