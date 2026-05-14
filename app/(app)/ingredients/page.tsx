@@ -10,7 +10,6 @@ import {
     LayoutGrid,
     Leaf,
     List,
-    Plus,
     Search,
     TrendingUp,
     Zap,
@@ -33,7 +32,6 @@ import {
 import IngredientGridCard from "@/components/ingredients/IngredientGridCard";
 import IngredientListRow from "@/components/ingredients/IngredientListRow";
 import IngredientAlertsPanel from "@/components/ingredients/IngredientAlertsPanel";
-// import AddIngredientPanel from "@/components/ingredients/AddIngredientPanel";
 import CatalogShimmer from "@/components/common/CatalogShimmer";
 import { ChevronSelect } from "@/components/common/ChevronSelect";
 
@@ -72,7 +70,6 @@ export default function IngredientsPage() {
 
     const [localSearch, setLocalSearch] = useState(ingredient.ui.searchApplied);
     const [showFilters, setShowFilters] = useState(false);
-    // const [showAddPanel, setShowAddPanel] = useState(false);
     useEffect(() => {
         console.log("[IngredientsPage] fetch trigger", {
             page: ingredient.pagination.page,
@@ -240,17 +237,6 @@ export default function IngredientsPage() {
                         >
                             <Filter className="h-3.5 w-3.5" />
                             Filters
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() => {
-                                // setShowAddPanel(true);
-                            }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-slate-900 text-white rounded-lg hover:bg-slate-700 transition-colors"
-                        >
-                            <Plus className="h-3.5 w-3.5" />
-                            Add
                         </button>
 
                         <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden">
@@ -454,17 +440,6 @@ export default function IngredientsPage() {
                     </p>
                 </div>
             </div>
-
-            {/*
-            <AddIngredientPanel
-                open={showAddPanel}
-                onClose={() => setShowAddPanel(false)}
-                onCreated={() => {
-                    console.log("[IngredientsPage] ingredient created, refetching");
-                    dispatch(fetchIngredientsPage());
-                }}
-            />
-            */}
         </div>
     );
 }

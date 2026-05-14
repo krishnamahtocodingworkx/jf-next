@@ -23,12 +23,11 @@ export const ENDPOINTS = {
     LIST_FOR_SELECT: `${API}/companies/`,
   },
   PRODUCT_BRAND: {
-    /** Backend uses this path with company id (Add Product) or product id depending on context. */
-    GET_BY_ID: (id: string) => `${API}/productBrand/get-product-brand/${id}`,
+    /** All brands for Add Product select. */
+    LIST: `${API}/productBrand/get-product-brand`,
   },
   INGREDIENT: {
     GET_INGREDIENT_LIST: `${API}/ingredient/get-ingredient-list`,
-    ADD_INGREDIENT: `${API}/ingredient/add-ingredient`,
   },
   INGREDIENTS: {
     SEARCH: (name: string) => `${API}/ingredients/${encodeURIComponent(name)}/search/`,

@@ -3,9 +3,12 @@ import { ENDPOINTS } from "@/utils/endpoints";
 import { auth } from "@/lib/firebase";
 import {
   attachBackendSuccessMessage,
+  dedupeSelectOptionsByValue,
+  normalizeBrandManufacturerRowToOption,
   normalizeCountryOptions,
-  unwrapApiListData,
   normalizeEntitySelectOptions,
+  unwrapApiListData,
+  unwrapCompanyTypeListRows,
 } from "@/utils/commonFunctions";
 import {
   signInWithCustomToken,
@@ -33,11 +36,6 @@ type RegisterPayload = {
 };
 
 class UserService {
-  /** Avoid repeat `get-product-brand/:id` calls for products with no brand (400). */
-  private productBrandByProductIdCache = new Map<string, Record<string, unknown> | null>();
-  /** Company id → brand row (`GET .../get-product-brand/:companyId`). */
-  private productBrandByCompanyIdCache = new Map<string, Record<string, unknown> | null>();
-
   //  Step 1: Firebase login (check MFA)
   async loginWithFirebase(email: string, password: string) {
     try {
@@ -141,7 +139,7 @@ class UserService {
   async getCompanyTypeList(): Promise<SelectOption[]> {
     try {
       const { data } = await api.get(ENDPOINTS.PROFILE.COMPANY_TYPE);
-      const rows = unwrapApiListData(data?.data ?? data);
+      const rows = unwrapCompanyTypeListRows(data);
       const opts = normalizeEntitySelectOptions(rows);
       console.log("[userService] getCompanyTypeList", opts.length);
       return opts;
@@ -177,77 +175,38 @@ class UserService {
     }
   }
 
-  clearProductBrandByIdCache(): void {
-    this.productBrandByProductIdCache.clear();
-    this.productBrandByCompanyIdCache.clear();
-    console.log("[userService] productBrand caches cleared");
-  }
-
-  /** Brand for selected company (`GET /api/v1/productBrand/get-product-brand/:companyId`). */
-  async getProductBrandByCompanyId(companyId: string): Promise<Record<string, unknown> | null> {
-    const clean = String(companyId || "").trim();
-    if (!clean) return null;
-    if (this.productBrandByCompanyIdCache.has(clean)) {
-      return this.productBrandByCompanyIdCache.get(clean) ?? null;
-    }
+  /** All product brands for Add Product (`GET /api/v1/productBrand/get-product-brand`). */
+  async getProductBrandList(): Promise<{
+    items: SelectOption[];
+    companyByBrandId: Record<string, string>;
+  }> {
     try {
-      const res = await api.get(ENDPOINTS.PRODUCT_BRAND.GET_BY_ID(clean), {
-        validateStatus: (status) =>
-          status === 200 || status === 400 || status === 404 || status === 204,
-      });
-      const httpStatus = res.status;
-      const payload = res.data as Record<string, unknown> | undefined;
-      const apiCode = Number(payload?.code);
-      if (httpStatus >= 400 || (Number.isFinite(apiCode) && apiCode !== 200)) {
-        this.productBrandByCompanyIdCache.set(clean, null);
-        console.log("[userService] getProductBrandByCompanyId no brand", clean, httpStatus, apiCode);
-        return null;
+      const { data } = await api.get(ENDPOINTS.PRODUCT_BRAND.LIST);
+      const rows = unwrapApiListData(data?.data ?? data);
+      const companyByBrandId: Record<string, string> = {};
+      const items: SelectOption[] = [];
+      for (const row of rows) {
+        if (!row || typeof row !== "object") continue;
+        const r = row as Record<string, unknown>;
+        const id = String(r._id ?? r.id ?? "").trim();
+        if (!id) continue;
+        const opt = normalizeBrandManufacturerRowToOption(r);
+        if (!opt) continue;
+        const comp = String(r.company ?? "").trim();
+        if (comp) companyByBrandId[id] = comp;
+        items.push(opt);
       }
-      const nested = payload?.data as Record<string, unknown> | undefined;
-      const row = (nested?.data ?? nested ?? null) as Record<string, unknown> | null;
-      const usable =
-        row && typeof row === "object" && Object.keys(row).length > 0 ? row : null;
-      this.productBrandByCompanyIdCache.set(clean, usable);
-      console.log("[userService] getProductBrandByCompanyId", clean, Boolean(usable));
-      return usable;
-    } catch (error) {
-      this.productBrandByCompanyIdCache.set(clean, null);
-      console.log("[userService] getProductBrandByCompanyId failed", clean, error);
-      return null;
-    }
-  }
-
-  /** Brand object for a product id (`GET /api/v1/productBrand/get-product-brand/:id`). */
-  async getProductBrandById(productId: string): Promise<Record<string, unknown> | null> {
-    const clean = String(productId || "").trim();
-    if (!clean) return null;
-    if (this.productBrandByProductIdCache.has(clean)) {
-      return this.productBrandByProductIdCache.get(clean) ?? null;
-    }
-    try {
-      const res = await api.get(ENDPOINTS.PRODUCT_BRAND.GET_BY_ID(clean), {
-        validateStatus: (status) =>
-          status === 200 || status === 400 || status === 404 || status === 204,
-      });
-      const httpStatus = res.status;
-      const payload = res.data as Record<string, unknown> | undefined;
-      const apiCode = Number(payload?.code);
-      if (httpStatus >= 400 || (Number.isFinite(apiCode) && apiCode !== 200)) {
-        this.productBrandByProductIdCache.set(clean, null);
-        console.log("[userService] getProductBrandById no brand", clean, httpStatus, apiCode);
-        return null;
+      const deduped = dedupeSelectOptionsByValue(items);
+      const map: Record<string, string> = {};
+      for (const o of deduped) {
+        const c = companyByBrandId[o.value];
+        if (c) map[o.value] = c;
       }
-      const nested = payload?.data as Record<string, unknown> | undefined;
-      const row = (nested?.data ?? nested ?? null) as Record<string, unknown> | null;
-      const usable =
-        row && typeof row === "object" && Object.keys(row).length > 0 ? row : null;
-      this.productBrandByProductIdCache.set(clean, usable);
-      console.log("[userService] getProductBrandById", clean, Boolean(usable));
-      return usable;
+      console.log("[userService] getProductBrandList", deduped.length);
+      return { items: deduped, companyByBrandId: map };
     } catch (error) {
-      this.productBrandByProductIdCache.set(clean, null);
-      console.log("[userService] getProductBrandById failed", clean, error);
-      return null;
+      console.log("[userService] getProductBrandList failed", error);
+      return { items: [], companyByBrandId: {} };
     }
   }
 }

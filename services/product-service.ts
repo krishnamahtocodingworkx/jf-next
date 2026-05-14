@@ -77,13 +77,12 @@ export function buildCreateProductPayload(
         companyProvided: Boolean(companyIdRaw),
         companyAccepted: Boolean(companyId),
     });
-    return {
+    const base: Record<string, unknown> = {
         name: String(values.name || "").trim(),
         description: String(values.notes || "").trim(),
         ingredients,
         category: String(values.category || "").trim(),
         brand: brandId,
-        manufacturer: manufacturerId,
         user: userId,
         unit,
         company: companyId,
@@ -91,6 +90,10 @@ export function buildCreateProductPayload(
         muteAnalytics: false,
         newVersion: false,
     };
+    if (manufacturerId) {
+        base.manufacturer = manufacturerId;
+    }
+    return base;
 }
 
 class ProductService {

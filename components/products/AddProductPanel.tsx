@@ -9,7 +9,7 @@ import {
 import { notifyApiSuccessToast } from "@/utils/showToast";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
-  fetchAddProductBrandsByCompanyId,
+  fetchAddProductBrands,
   fetchAddProductCategoryBundle,
   fetchAddProductCompanyTypes,
   fetchAddProductCountriesLazy,
@@ -20,7 +20,6 @@ import {
   searchAddProductIngredients,
 } from "@/redux/product/product-thunks";
 import {
-  clearAddProductBrandOptions,
   clearAddProductIngredientSearch,
   resetAddProductPanel,
 } from "@/redux/product/product-slice";
@@ -38,8 +37,7 @@ import {
 import { ChevronSelect } from "@/components/common/ChevronSelect";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-
-/** Matches `AddProductForm` objective fallbacks in JourneyFoodsDashboardUpgraded. */
+ 
 const PRODUCT_OBJECTIVE_OPTIONS = [
   "Cost",
   "Sustainability",
@@ -115,16 +113,6 @@ export default function AddProductPanel({
   }, [open, addPanel.brands.items, formData.brand]);
 
   useEffect(() => {
-    if (!open) return;
-    const cid = formData.company.trim();
-    if (!cid) {
-      dispatch(clearAddProductBrandOptions());
-      return;
-    }
-    void dispatch(fetchAddProductBrandsByCompanyId(cid));
-  }, [open, formData.company, dispatch]);
-
-  useEffect(() => {
     const t = setTimeout(() => setDebouncedIngredient(ingredientInput), 400);
     return () => clearTimeout(t);
   }, [ingredientInput]);
@@ -138,11 +126,6 @@ export default function AddProductPanel({
     }
     void dispatch(searchAddProductIngredients({ term: q, page: 1, size: 20 }));
   }, [debouncedIngredient, open, dispatch]);
-
-  useEffect(() => {
-    if (!open) return;
-    void dispatch(fetchAddProductRootCategories());
-  }, [open, dispatch]);
 
   useEffect(() => {
     if (!open) return;
@@ -501,26 +484,28 @@ export default function AddProductPanel({
                   <label className={lbl}>Brand</label>
                   <ChevronSelect
                     value={formData.brand}
-                    onChange={(e) => updateField("brand", e.target.value)}
-                    onOpenIntent={() => {
-                      const cid = formData.company.trim();
-                      if (cid) {
-                        void dispatch(fetchAddProductBrandsByCompanyId(cid));
-                      }
+                    onChange={(e) => {
+                      const brandId = e.target.value;
+                      const companyId = brandId
+                        ? addPanel.brands.companyByBrandId[brandId] ?? ""
+                        : "";
+                      setFormData((prev) => ({
+                        ...prev,
+                        brand: brandId,
+                        company: brandId ? companyId : "",
+                      }));
                     }}
-                    disabled={
-                      !formData.company.trim() ||
-                      addPanel.brands.enrichment === "loading"
-                    }
+                    onOpenIntent={() => {
+                      void dispatch(fetchAddProductBrands());
+                    }}
+                    disabled={addPanel.brands.enrichment === "loading"}
                     className={selectField}
                     iconClassName="right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
                   >
                     <option value="">
-                      {!formData.company.trim()
-                        ? "Select company first"
-                        : addPanel.brands.enrichment === "loading"
-                          ? "Loading brand…"
-                          : "Select Brand"}
+                      {addPanel.brands.enrichment === "loading"
+                        ? "Loading brands…"
+                        : "Select Brand"}
                     </option>
                     {addPanel.brands.items.map((o) => (
                       <option key={o.value} value={o.value}>
@@ -528,10 +513,9 @@ export default function AddProductPanel({
                       </option>
                     ))}
                   </ChevronSelect>
-                  {addPanel.brands.enrichment === "loading" &&
-                  formData.company.trim() ? (
+                  {addPanel.brands.enrichment === "loading" ? (
                     <p className="mt-1 text-xs text-slate-500">
-                      Loading brand for company…
+                      Loading brands…
                     </p>
                   ) : null}
                 </div>

@@ -3,7 +3,6 @@ import type { SelectOption } from "@/utils/model";
 import { productService } from "@/services/product-service";
 import { userService } from "@/services/user-service";
 import { ingredientService } from "@/services/ingredient-service";
-import { normalizeBrandManufacturerRowToOption } from "@/utils/commonFunctions";
 
 type ProductCatalogSlice = {
     catalog: {
@@ -66,7 +65,7 @@ type AddPanelRefRoot = {
                 status: string;
                 items: SelectOption[];
                 enrichment: string;
-                pendingCompanyId: string | null;
+                companyByBrandId: Record<string, string>;
             };
             manufacturers: { status: string };
             countries: { status: string };
@@ -77,7 +76,7 @@ type AddPanelRefRoot = {
 
 const selectAddPanel = (s: unknown) => (s as AddPanelRefRoot).product.addPanel;
 
-/** Company types — opened from Select Company (`onFocus`). */
+/** Company types — `GET /api/v1/companyType/company-type-list` (Add Product company select). */
 export const fetchAddProductCompanyTypes = createAsyncThunk(
     "product/fetchAddProductCompanyTypes",
     async () => {
@@ -155,19 +154,21 @@ export const fetchAddProductSubCategoryBundle = createAsyncThunk(
     },
 );
 
-/** Brand for Add Product — `GET .../productBrand/get-product-brand/:companyId` (company from company-type list). */
-export const fetchAddProductBrandsByCompanyId = createAsyncThunk(
-    "product/fetchAddProductBrandsByCompanyId",
-    async (companyId: string) => {
-        const clean = String(companyId || "").trim();
-        if (!clean) return [] as SelectOption[];
-        const row = await userService.getProductBrandByCompanyId(clean);
-        const opt = row ? normalizeBrandManufacturerRowToOption(row) : null;
-        console.log("[product] addPanel brands by company", clean, Boolean(opt));
-        return opt ? [opt] : ([] as SelectOption[]);
+/** Product brands for Add Product — `GET .../productBrand/get-product-brand`. */
+export const fetchAddProductBrands = createAsyncThunk(
+    "product/fetchAddProductBrands",
+    async () => {
+        const { items, companyByBrandId } = await userService.getProductBrandList();
+        console.log("[product] addPanel brands loaded", items.length);
+        return { items, companyByBrandId };
     },
     {
-        condition: (companyId) => Boolean(String(companyId || "").trim()),
+        condition: (_, { getState }) => {
+            const b = selectAddPanel(getState()).brands;
+            if (b.status === "loading") return false;
+            if (b.status === "succeeded" && b.items.length > 0) return false;
+            return true;
+        },
     },
 );
 

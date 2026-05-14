@@ -10,7 +10,7 @@ import {
     fetchAddProductRootCategories,
     fetchAddProductCategoryBundle,
     fetchAddProductSubCategoryBundle,
-    fetchAddProductBrandsByCompanyId,
+    fetchAddProductBrands,
     fetchAddProductManufacturersLazy,
     fetchAddProductCountriesLazy,
     fetchAddProductCurrenciesLazy,
@@ -43,8 +43,8 @@ export type AddPanelBrandsState = {
     status: "idle" | "loading" | "succeeded" | "failed";
     items: SelectOption[];
     enrichment: "idle" | "loading" | "done";
-    /** Latest in-flight company id; ignore fulfilled/rejected when it does not match. */
-    pendingCompanyId: string | null;
+    /** Brand id → company id from list API (for `company_id` on submit). */
+    companyByBrandId: Record<string, string>;
 };
 
 export type ProductAddPanelState = {
@@ -68,7 +68,7 @@ const emptyBrandsState = (): AddPanelBrandsState => ({
     status: "idle",
     items: [],
     enrichment: "idle",
-    pendingCompanyId: null,
+    companyByBrandId: {},
 });
 
 const initialAddPanel = (): ProductAddPanelState => ({
@@ -202,7 +202,7 @@ const productSlice = createSlice({
             state.addPanel.brands.items = [];
             state.addPanel.brands.status = "idle";
             state.addPanel.brands.enrichment = "idle";
-            state.addPanel.brands.pendingCompanyId = null;
+            state.addPanel.brands.companyByBrandId = {};
         },
     },
     extraReducers: (builder) => {
@@ -311,27 +311,21 @@ const productSlice = createSlice({
                     subCategories: [],
                 };
             })
-            .addCase(fetchAddProductBrandsByCompanyId.pending, (state, action) => {
+            .addCase(fetchAddProductBrands.pending, (state) => {
                 state.addPanel.brands.status = "loading";
                 state.addPanel.brands.enrichment = "loading";
-                state.addPanel.brands.pendingCompanyId = action.meta.arg;
                 state.addPanel.brands.items = [];
+                state.addPanel.brands.companyByBrandId = {};
             })
-            .addCase(fetchAddProductBrandsByCompanyId.fulfilled, (state, action) => {
-                if (state.addPanel.brands.pendingCompanyId !== action.meta.arg) {
-                    return;
-                }
-                state.addPanel.brands.pendingCompanyId = null;
-                state.addPanel.brands.items = action.payload;
+            .addCase(fetchAddProductBrands.fulfilled, (state, action) => {
+                state.addPanel.brands.items = action.payload.items;
+                state.addPanel.brands.companyByBrandId = action.payload.companyByBrandId;
                 state.addPanel.brands.status = "succeeded";
                 state.addPanel.brands.enrichment = "done";
             })
-            .addCase(fetchAddProductBrandsByCompanyId.rejected, (state, action) => {
-                if (state.addPanel.brands.pendingCompanyId !== action.meta.arg) {
-                    return;
-                }
-                state.addPanel.brands.pendingCompanyId = null;
+            .addCase(fetchAddProductBrands.rejected, (state) => {
                 state.addPanel.brands.items = [];
+                state.addPanel.brands.companyByBrandId = {};
                 state.addPanel.brands.status = "failed";
                 state.addPanel.brands.enrichment = "done";
             })

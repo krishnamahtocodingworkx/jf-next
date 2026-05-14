@@ -178,6 +178,17 @@ export function unwrapApiListData(payload: unknown): Record<string, unknown>[] {
   return [];
 }
 
+/** Rows from `GET .../companyType/company-type-list` (`data.data.data[]`). */
+export function unwrapCompanyTypeListRows(apiBody: unknown): Record<string, unknown>[] {
+  if (apiBody == null || typeof apiBody !== "object") return [];
+  const root = apiBody as Record<string, unknown>;
+  const mid = root.data as Record<string, unknown> | undefined;
+  const page = mid?.data as Record<string, unknown> | undefined;
+  const list = page?.data;
+  if (Array.isArray(list)) return list as Record<string, unknown>[];
+  return unwrapApiListData(mid ?? root);
+}
+
 function readStringField(row: Record<string, unknown>, keys: string[]): string {
   for (const key of keys) {
     const v = row[key];
