@@ -7,7 +7,9 @@ import {
     fetchProductCatalog,
     fetchProductDetail,
     fetchAddProductCompanyTypes,
+    fetchAddProductRootCategories,
     fetchAddProductCategoryBundle,
+    fetchAddProductSubCategoryBundle,
     fetchAddProductBrandsByCompanyId,
     fetchAddProductManufacturersLazy,
     fetchAddProductCountriesLazy,
@@ -47,7 +49,9 @@ export type AddPanelBrandsState = {
 
 export type ProductAddPanelState = {
     companyTypes: AddPanelListField;
+    rootCategories: AddPanelListField;
     categoryBundles: Record<string, AddPanelCategoryBundle>;
+    subCategoryBundles: Record<string, AddPanelCategoryBundle>;
     brands: AddPanelBrandsState;
     manufacturers: AddPanelListField;
     countries: AddPanelListField;
@@ -69,7 +73,9 @@ const emptyBrandsState = (): AddPanelBrandsState => ({
 
 const initialAddPanel = (): ProductAddPanelState => ({
     companyTypes: emptyListField(),
+    rootCategories: emptyListField(),
     categoryBundles: {},
+    subCategoryBundles: {},
     brands: emptyBrandsState(),
     manufacturers: emptyListField(),
     countries: emptyListField(),
@@ -239,6 +245,16 @@ const productSlice = createSlice({
             .addCase(fetchAddProductCompanyTypes.rejected, (state) => {
                 state.addPanel.companyTypes.status = "failed";
             })
+            .addCase(fetchAddProductRootCategories.pending, (state) => {
+                state.addPanel.rootCategories.status = "loading";
+            })
+            .addCase(fetchAddProductRootCategories.fulfilled, (state, action) => {
+                state.addPanel.rootCategories.status = "succeeded";
+                state.addPanel.rootCategories.items = action.payload;
+            })
+            .addCase(fetchAddProductRootCategories.rejected, (state) => {
+                state.addPanel.rootCategories.status = "failed";
+            })
             .addCase(fetchAddProductCategoryBundle.pending, (state, action) => {
                 const cat = action.meta.arg;
                 const prev = state.addPanel.categoryBundles[cat] ?? {
@@ -262,6 +278,34 @@ const productSlice = createSlice({
             .addCase(fetchAddProductCategoryBundle.rejected, (state, action) => {
                 const cat = action.meta.arg;
                 state.addPanel.categoryBundles[cat] = {
+                    status: "failed",
+                    productTypes: [],
+                    subCategories: [],
+                };
+            })
+            .addCase(fetchAddProductSubCategoryBundle.pending, (state, action) => {
+                const sub = String(action.meta.arg || "").trim();
+                const prev = state.addPanel.subCategoryBundles[sub] ?? {
+                    status: "idle" as const,
+                    productTypes: [],
+                    subCategories: [],
+                };
+                state.addPanel.subCategoryBundles[sub] = {
+                    ...prev,
+                    status: "loading",
+                };
+            })
+            .addCase(fetchAddProductSubCategoryBundle.fulfilled, (state, action) => {
+                const { subCategory, productTypes, subCategories } = action.payload;
+                state.addPanel.subCategoryBundles[subCategory] = {
+                    status: "succeeded",
+                    productTypes,
+                    subCategories,
+                };
+            })
+            .addCase(fetchAddProductSubCategoryBundle.rejected, (state, action) => {
+                const sub = String(action.meta.arg || "").trim();
+                state.addPanel.subCategoryBundles[sub] = {
                     status: "failed",
                     productTypes: [],
                     subCategories: [],

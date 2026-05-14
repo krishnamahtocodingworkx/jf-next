@@ -15,6 +15,8 @@ import {
   fetchAddProductCountriesLazy,
   fetchAddProductCurrenciesLazy,
   fetchAddProductManufacturersLazy,
+  fetchAddProductRootCategories,
+  fetchAddProductSubCategoryBundle,
   searchAddProductIngredients,
 } from "@/redux/product/product-thunks";
 import {
@@ -34,7 +36,6 @@ import {
   getAddProductIngredientSelectionError,
 } from "@/utils/schema";
 import { ChevronSelect } from "@/components/common/ChevronSelect";
-import { PRODUCT_CATEGORY_OPTIONS } from "@/utils/enum";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -140,10 +141,22 @@ export default function AddProductPanel({
 
   useEffect(() => {
     if (!open) return;
+    void dispatch(fetchAddProductRootCategories());
+  }, [open, dispatch]);
+
+  useEffect(() => {
+    if (!open) return;
     const cat = formData.category.trim();
     if (!cat) return;
     void dispatch(fetchAddProductCategoryBundle(cat));
   }, [open, formData.category, dispatch]);
+
+  useEffect(() => {
+    if (!open) return;
+    const sc = formData.subcategory.trim();
+    if (!sc) return;
+    void dispatch(fetchAddProductSubCategoryBundle(sc));
+  }, [open, formData.subcategory, dispatch]);
 
   const updateField = useCallback(
     <K extends keyof AddProductFormValues>(
@@ -170,8 +183,18 @@ export default function AddProductPanel({
   const bundle = formData.category
     ? addPanel.categoryBundles[formData.category]
     : undefined;
-  const productTypeOptions = bundle?.productTypes ?? [];
+  const subKey = formData.subcategory.trim();
+  const subBundle = subKey ? addPanel.subCategoryBundles[subKey] : undefined;
+  const productTypesFromSub =
+    subBundle?.status === "succeeded" && subBundle.productTypes.length > 0
+      ? subBundle.productTypes
+      : null;
+  const productTypeOptions = productTypesFromSub ?? (bundle?.productTypes ?? []);
   const subCategoryOptions = bundle?.subCategories ?? [];
+  const productTypeSelectLoading =
+    Boolean(formData.category.trim()) &&
+    (bundle?.status === "loading" ||
+      (Boolean(subKey) && subBundle?.status === "loading"));
 
   const handleSubmit = async () => {
     const formErr = getAddProductFormValidationError(formData);
@@ -357,11 +380,19 @@ export default function AddProductPanel({
                         subcategory: "",
                       }));
                     }}
+                    onOpenIntent={() => {
+                      void dispatch(fetchAddProductRootCategories());
+                    }}
+                    disabled={addPanel.rootCategories.status === "loading"}
                     className={selectField}
                     iconClassName="right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
                   >
-                    <option value="">Select Category</option>
-                    {PRODUCT_CATEGORY_OPTIONS.map((o) => (
+                    <option value="">
+                      {addPanel.rootCategories.status === "loading"
+                        ? "Loading categories…"
+                        : "Select Category"}
+                    </option>
+                    {addPanel.rootCategories.items.map((o) => (
                       <option key={o.value} value={o.value}>
                         {o.label}
                       </option>
@@ -380,16 +411,14 @@ export default function AddProductPanel({
                         );
                       }
                     }}
-                    disabled={
-                      !formData.category || bundle?.status === "loading"
-                    }
+                    disabled={!formData.category || productTypeSelectLoading}
                     className={selectField}
                     iconClassName="right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
                   >
                     <option value="">
                       {!formData.category
                         ? "Select category first"
-                        : bundle?.status === "loading"
+                        : productTypeSelectLoading
                           ? "Loading…"
                           : "Select Product Type"}
                     </option>
@@ -404,12 +433,23 @@ export default function AddProductPanel({
                   <label className={lbl}>Subcategory</label>
                   <ChevronSelect
                     value={formData.subcategory}
-                    onChange={(e) => updateField("subcategory", e.target.value)}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setFormData((prev) => ({
+                        ...prev,
+                        subcategory: v,
+                        productType: "",
+                      }));
+                    }}
                     onOpenIntent={() => {
                       if (formData.category) {
                         void dispatch(
                           fetchAddProductCategoryBundle(formData.category),
                         );
+                      }
+                      const sc = formData.subcategory.trim();
+                      if (sc) {
+                        void dispatch(fetchAddProductSubCategoryBundle(sc));
                       }
                     }}
                     disabled={
@@ -422,7 +462,7 @@ export default function AddProductPanel({
                   >
                     <option value="">
                       {!formData.category
-                        ? "Select prod. type first"
+                        ? "Select category first"
                         : subCategoryOptions.length === 0
                           ? "No subcategories"
                           : "Select Subcategory"}

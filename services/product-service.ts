@@ -311,6 +311,67 @@ class ProductService {
         }
     }
 
+    /** `GET /api/v1/productType/category-list` (no params) — top-level categories only. */
+    async getCategoryListRoot(): Promise<string[]> {
+        try {
+            const { data } = await api.get(ENDPOINTS.PRODUCT_TYPE.CATEGORY_LIST);
+            const list = this.parseCategoryListRows(data);
+            const names = list
+                .map((row) => String(row.category ?? "").trim())
+                .filter(Boolean);
+            const unique = [...new Set(names)];
+            console.log("[productService] getCategoryListRoot", unique.length, unique);
+            return unique;
+        } catch (e) {
+            console.log("[productService] getCategoryListRoot failed", e);
+            handleApiError(e, "Product category list");
+            return [];
+        }
+    }
+
+    private parseCategoryListRows(data: unknown): Record<string, unknown>[] {
+        const body = (data ?? {}) as Record<string, unknown>;
+        if (Array.isArray(body.data)) {
+            return body.data as Record<string, unknown>[];
+        }
+        return unwrapApiListData(body.data ?? body) as Record<string, unknown>[];
+    }
+
+    private pickCategoryListRow(
+        list: Record<string, unknown>[],
+        match: { category?: string; subCategory?: string },
+    ): Record<string, unknown> | undefined {
+        const cat = String(match.category ?? "").trim();
+        const sub = String(match.subCategory ?? "").trim();
+        if (sub) {
+            const bySub = list.find(
+                (row) =>
+                    String(row.subCategory ?? row.subcategory ?? "") === sub ||
+                    String(row.category ?? "") === sub,
+            );
+            if (bySub) return bySub;
+        }
+        if (cat) {
+            const byCat = list.find((row) => String(row.category ?? "") === cat);
+            if (byCat) return byCat;
+        }
+        return list[0];
+    }
+
+    private rowToTypesAndSubs(row: Record<string, unknown> | undefined): {
+        productTypes: string[];
+        subCategories: string[];
+    } {
+        if (!row) return { productTypes: [], subCategories: [] };
+        const productTypes = Array.isArray(row.productTypes)
+            ? (row.productTypes as unknown[]).map((x) => String(x))
+            : [];
+        const subCategories = Array.isArray(row.subCategories)
+            ? (row.subCategories as unknown[]).map((x) => String(x))
+            : [];
+        return { productTypes, subCategories };
+    }
+
     /** `GET /api/v1/productType/category-list?category=Beverages` */
     async getCategoryListBundle(category: string): Promise<{
         productTypes: string[];
@@ -322,22 +383,9 @@ class ProductService {
             const { data } = await api.get(ENDPOINTS.PRODUCT_TYPE.CATEGORY_LIST, {
                 params: { category: cat },
             });
-            const body = (data ?? {}) as Record<string, unknown>;
-            let list: Record<string, unknown>[] = [];
-            if (Array.isArray(body.data)) {
-                list = body.data as Record<string, unknown>[];
-            } else {
-                list = unwrapApiListData(body.data ?? body) as Record<string, unknown>[];
-            }
-            const first =
-                (list.find((row) => String(row.category ?? "") === cat) as Record<string, unknown> | undefined) ??
-                (list[0] as Record<string, unknown> | undefined);
-            const productTypes = Array.isArray(first?.productTypes)
-                ? (first.productTypes as unknown[]).map((x) => String(x))
-                : [];
-            const subCategories = Array.isArray(first?.subCategories)
-                ? (first.subCategories as unknown[]).map((x) => String(x))
-                : [];
+            const list = this.parseCategoryListRows(data);
+            const row = this.pickCategoryListRow(list, { category: cat });
+            const { productTypes, subCategories } = this.rowToTypesAndSubs(row);
             console.log("[productService] getCategoryListBundle", cat, {
                 productTypes: productTypes.length,
                 subCategories: subCategories.length,
@@ -345,6 +393,32 @@ class ProductService {
             return { productTypes, subCategories };
         } catch (e) {
             console.log("[productService] getCategoryListBundle failed", cat, e);
+            handleApiError(e, "Product category list");
+            return { productTypes: [], subCategories: [] };
+        }
+    }
+
+    /** `GET /api/v1/productType/category-list?subCategory=Snacks` (and similar). */
+    async getCategoryListBundleBySubCategory(subCategory: string): Promise<{
+        productTypes: string[];
+        subCategories: string[];
+    }> {
+        const sub = String(subCategory || "").trim();
+        if (!sub) return { productTypes: [], subCategories: [] };
+        try {
+            const { data } = await api.get(ENDPOINTS.PRODUCT_TYPE.CATEGORY_LIST, {
+                params: { subCategory: sub },
+            });
+            const list = this.parseCategoryListRows(data);
+            const row = this.pickCategoryListRow(list, { subCategory: sub });
+            const { productTypes, subCategories } = this.rowToTypesAndSubs(row);
+            console.log("[productService] getCategoryListBundleBySubCategory", sub, {
+                productTypes: productTypes.length,
+                subCategories: subCategories.length,
+            });
+            return { productTypes, subCategories };
+        } catch (e) {
+            console.log("[productService] getCategoryListBundleBySubCategory failed", sub, e);
             handleApiError(e, "Product category list");
             return { productTypes: [], subCategories: [] };
         }

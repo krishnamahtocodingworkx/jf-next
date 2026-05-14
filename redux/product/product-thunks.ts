@@ -59,7 +59,9 @@ type AddPanelRefRoot = {
     product: {
         addPanel: {
             companyTypes: { status: string };
+            rootCategories: { status: string; items: unknown[] };
             categoryBundles: Record<string, { status?: string } | undefined>;
+            subCategoryBundles: Record<string, { status?: string } | undefined>;
             brands: {
                 status: string;
                 items: SelectOption[];
@@ -93,6 +95,25 @@ export const fetchAddProductCompanyTypes = createAsyncThunk(
     },
 );
 
+/** Top-level categories — `GET /api/v1/productType/category-list` (no query). */
+export const fetchAddProductRootCategories = createAsyncThunk(
+    "product/fetchAddProductRootCategories",
+    async () => {
+        const names = await productService.getCategoryListRoot();
+        const items: SelectOption[] = names.map((n) => ({ value: n, label: n }));
+        console.log("[product] addPanel root categories", items.length);
+        return items;
+    },
+    {
+        condition: (_, { getState }) => {
+            const s = selectAddPanel(getState()).rootCategories;
+            if (s.status === "loading") return false;
+            if (s.status === "succeeded" && s.items.length > 0) return false;
+            return true;
+        },
+    },
+);
+
 /** Category / product type / subcategory bundle — opened from those selects (`onFocus`). */
 export const fetchAddProductCategoryBundle = createAsyncThunk(
     "product/fetchAddProductCategoryBundle",
@@ -106,6 +127,27 @@ export const fetchAddProductCategoryBundle = createAsyncThunk(
             const key = String(category || "").trim();
             if (!key) return false;
             const row = selectAddPanel(getState()).categoryBundles[key];
+            if (row?.status === "loading") return false;
+            if (row?.status === "succeeded") return false;
+            return true;
+        },
+    },
+);
+
+/** `GET /api/v1/productType/category-list?subCategory=…` — drill-down row for subcategory. */
+export const fetchAddProductSubCategoryBundle = createAsyncThunk(
+    "product/fetchAddProductSubCategoryBundle",
+    async (subCategory: string) => {
+        const key = String(subCategory || "").trim();
+        const bundle = await productService.getCategoryListBundleBySubCategory(key);
+        console.log("[product] addPanel subCategory bundle", key, bundle);
+        return { subCategory: key, ...bundle };
+    },
+    {
+        condition: (subCategory, { getState }) => {
+            const key = String(subCategory || "").trim();
+            if (!key) return false;
+            const row = selectAddPanel(getState()).subCategoryBundles[key];
             if (row?.status === "loading") return false;
             if (row?.status === "succeeded") return false;
             return true;

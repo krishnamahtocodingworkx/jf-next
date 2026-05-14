@@ -33,7 +33,7 @@ import {
 import IngredientGridCard from "@/components/ingredients/IngredientGridCard";
 import IngredientListRow from "@/components/ingredients/IngredientListRow";
 import IngredientAlertsPanel from "@/components/ingredients/IngredientAlertsPanel";
-import AddIngredientPanel from "@/components/ingredients/AddIngredientPanel";
+// import AddIngredientPanel from "@/components/ingredients/AddIngredientPanel";
 import CatalogShimmer from "@/components/common/CatalogShimmer";
 import { ChevronSelect } from "@/components/common/ChevronSelect";
 
@@ -72,7 +72,7 @@ export default function IngredientsPage() {
 
     const [localSearch, setLocalSearch] = useState(ingredient.ui.searchApplied);
     const [showFilters, setShowFilters] = useState(false);
-    const [showAddPanel, setShowAddPanel] = useState(false);
+    // const [showAddPanel, setShowAddPanel] = useState(false);
     useEffect(() => {
         console.log("[IngredientsPage] fetch trigger", {
             page: ingredient.pagination.page,
@@ -244,7 +244,9 @@ export default function IngredientsPage() {
 
                         <button
                             type="button"
-                            onClick={() => setShowAddPanel(true)}
+                            onClick={() => {
+                                // setShowAddPanel(true);
+                            }}
                             className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-slate-900 text-white rounded-lg hover:bg-slate-700 transition-colors"
                         >
                             <Plus className="h-3.5 w-3.5" />
@@ -453,6 +455,7 @@ export default function IngredientsPage() {
                 </div>
             </div>
 
+            {/*
             <AddIngredientPanel
                 open={showAddPanel}
                 onClose={() => setShowAddPanel(false)}
@@ -461,6 +464,7 @@ export default function IngredientsPage() {
                     dispatch(fetchIngredientsPage());
                 }}
             />
+            */}
         </div>
     );
 }
