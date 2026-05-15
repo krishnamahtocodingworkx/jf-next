@@ -1,13 +1,8 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
+import type { SelectOption } from "@/utils/model";
 import { productService } from "@/services/product-service";
 import { userService } from "@/services/user-service";
-import type { UserState } from "@/redux/user/user-types";
-import {
-    brandsFromProductListRows,
-    dedupeSelectOptionsByValue,
-    mergeCompanySources,
-    normalizeBrandManufacturerRowToOption,
-} from "@/utils/commonFunctions";
+import { ingredientService } from "@/services/ingredient-service";
 
 type ProductCatalogSlice = {
     catalog: {
@@ -58,60 +53,193 @@ export const fetchProductDetail = createAsyncThunk(
     },
 );
 
-/**
- * Add Product dropdowns — aligned with  `AddProductForm`:
- * brands from product list (then `/user/brands/`, then per-product `getProductBrandById`),
- * manufacturers from `/products/manufacturers/`, countries + currencies + companies APIs.
- */
-export const fetchProductAddFormOptions = createAsyncThunk(
-    "product/fetchAddFormOptions",
-    async (_, { getState }) => {
-        const root = getState() as { user: UserState };
-        const profile = root.user.details as Record<string, unknown> | null;
+/** Narrow slice without importing `store` (avoids circular slice → thunks → store). */
+type AddPanelRefRoot = {
+    product: {
+        addPanel: {
+            companyTypes: { status: string };
+            rootCategories: { status: string; items: unknown[] };
+            categoryBundles: Record<string, { status?: string } | undefined>;
+            subCategoryBundles: Record<string, { status?: string } | undefined>;
+            brands: {
+                status: string;
+                items: SelectOption[];
+                enrichment: string;
+                companyByBrandId: Record<string, string>;
+            };
+            manufacturers: { status: string };
+            countries: { status: string };
+            currencies: { status: string };
+        };
+    };
+};
 
-        const [productsRes, userBrandOpts, manufacturers, countryRows, currencies, companiesRaw] =
-            await Promise.all([
-                productService.getProductsPage({ page: 1, limit: 50 }),
-                userService.getBrands(),
-                userService.getManufacturers(),
-                userService.getCountries(),
-                productService.getCurrencyOptions(),
-                userService.getCompanies(),
-            ]);
+const selectAddPanel = (s: unknown) => (s as AddPanelRefRoot).product.addPanel;
 
-        let brands = dedupeSelectOptionsByValue(brandsFromProductListRows(productsRes.list));
-        if (brands.length === 0) {
-            brands = dedupeSelectOptionsByValue(userBrandOpts);
+/** Company types — `GET /api/v1/companyType/company-type-list` (Add Product company select). */
+export const fetchAddProductCompanyTypes = createAsyncThunk(
+    "product/fetchAddProductCompanyTypes",
+    async () => {
+        const items = await userService.getCompanyTypeList();
+        console.log("[product] addPanel company types loaded", items.length);
+        return items;
+    },
+    {
+        condition: (_, { getState }) => {
+            const s = selectAddPanel(getState()).companyTypes;
+            if (s.status === "loading") return false;
+            if (s.status === "succeeded") return false;
+            return true;
+        },
+    },
+);
+
+/** Top-level categories — `GET /api/v1/productType/category-list` (no query). */
+export const fetchAddProductRootCategories = createAsyncThunk(
+    "product/fetchAddProductRootCategories",
+    async () => {
+        const names = await productService.getCategoryListRoot();
+        const items: SelectOption[] = names.map((n) => ({ value: n, label: n }));
+        console.log("[product] addPanel root categories", items.length);
+        return items;
+    },
+    {
+        condition: (_, { getState }) => {
+            const s = selectAddPanel(getState()).rootCategories;
+            if (s.status === "loading") return false;
+            if (s.status === "succeeded" && s.items.length > 0) return false;
+            return true;
+        },
+    },
+);
+
+/** Category / product type / subcategory bundle — opened from those selects (`onFocus`). */
+export const fetchAddProductCategoryBundle = createAsyncThunk(
+    "product/fetchAddProductCategoryBundle",
+    async (category: string) => {
+        const bundle = await productService.getCategoryListBundle(category);
+        console.log("[product] addPanel category bundle", category, bundle);
+        return { category, ...bundle };
+    },
+    {
+        condition: (category, { getState }) => {
+            const key = String(category || "").trim();
+            if (!key) return false;
+            const row = selectAddPanel(getState()).categoryBundles[key];
+            if (row?.status === "loading") return false;
+            if (row?.status === "succeeded") return false;
+            return true;
+        },
+    },
+);
+
+/** `GET /api/v1/productType/category-list?subCategory=…` — drill-down row for subcategory. */
+export const fetchAddProductSubCategoryBundle = createAsyncThunk(
+    "product/fetchAddProductSubCategoryBundle",
+    async (subCategory: string) => {
+        const key = String(subCategory || "").trim();
+        const bundle = await productService.getCategoryListBundleBySubCategory(key);
+        console.log("[product] addPanel subCategory bundle", key, bundle);
+        return { subCategory: key, ...bundle };
+    },
+    {
+        condition: (subCategory, { getState }) => {
+            const key = String(subCategory || "").trim();
+            if (!key) return false;
+            const row = selectAddPanel(getState()).subCategoryBundles[key];
+            if (row?.status === "loading") return false;
+            if (row?.status === "succeeded") return false;
+            return true;
+        },
+    },
+);
+
+/** Product brands for Add Product — `GET .../productBrand/get-product-brand`. */
+export const fetchAddProductBrands = createAsyncThunk(
+    "product/fetchAddProductBrands",
+    async () => {
+        const { items, companyByBrandId } = await userService.getProductBrandList();
+        console.log("[product] addPanel brands loaded", items.length);
+        return { items, companyByBrandId };
+    },
+    {
+        condition: (_, { getState }) => {
+            const b = selectAddPanel(getState()).brands;
+            if (b.status === "loading") return false;
+            if (b.status === "succeeded" && b.items.length > 0) return false;
+            return true;
+        },
+    },
+);
+
+export const fetchAddProductManufacturersLazy = createAsyncThunk(
+    "product/fetchAddProductManufacturersLazy",
+    async () => {
+        const items = await userService.getManufacturers();
+        console.log("[product] addPanel manufacturers", items.length);
+        return items;
+    },
+    {
+        condition: (_, { getState }) => {
+            const s = selectAddPanel(getState()).manufacturers;
+            if (s.status === "loading") return false;
+            if (s.status === "succeeded") return false;
+            return true;
+        },
+    },
+);
+
+export const fetchAddProductCountriesLazy = createAsyncThunk(
+    "product/fetchAddProductCountriesLazy",
+    async () => {
+        const countryRows = await userService.getCountries();
+        const items = countryRows.map((r) => ({ value: r.id, label: r.name }));
+        console.log("[product] addPanel countries", items.length);
+        return items;
+    },
+    {
+        condition: (_, { getState }) => {
+            const s = selectAddPanel(getState()).countries;
+            if (s.status === "loading") return false;
+            if (s.status === "succeeded") return false;
+            return true;
+        },
+    },
+);
+
+export const fetchAddProductCurrenciesLazy = createAsyncThunk(
+    "product/fetchAddProductCurrenciesLazy",
+    async () => {
+        const items = await productService.getCurrencyOptions();
+        console.log("[product] addPanel currencies", items.length);
+        return items;
+    },
+    {
+        condition: (_, { getState }) => {
+            const s = selectAddPanel(getState()).currencies;
+            if (s.status === "loading") return false;
+            if (s.status === "succeeded") return false;
+            return true;
+        },
+    },
+);
+
+export const searchAddProductIngredients = createAsyncThunk(
+    "product/searchAddProductIngredients",
+    async (arg: { term: string; page: number; size?: number }) => {
+        const term = arg.term.trim();
+        const page = Math.max(1, arg.page);
+        const size = Math.max(1, arg.size ?? 20);
+        if (!term) {
+            return {
+                term: "",
+                page: 1,
+                list: [] as Awaited<ReturnType<typeof ingredientService.searchIngredients>>["list"],
+                pagination: { page: 1, pages: 1, size, total: 0 },
+            };
         }
-        if (brands.length === 0) {
-            const productIds = [
-                ...new Set(
-                    productsRes.list
-                        .map((row) => String(row._id ?? row.id ?? "").trim())
-                        .filter(Boolean),
-                ),
-            ].slice(0, 20);
-            const fetched: { value: string; label: string }[] = [];
-            // for (const pid of productIds) {
-            //     const b = await userService.getProductBrandById(pid);
-            //     const n = b ? normalizeBrandManufacturerRowToOption(b) : null;
-            //     if (n) fetched.push(n);
-            // }
-            brands = dedupeSelectOptionsByValue(fetched);
-            console.log("[product] add form brands from productBrand API", brands.length);
-        }
-
-        const companies = mergeCompanySources(companiesRaw, profile);
-        const countries = countryRows.map((r) => ({ value: r.id, label: r.name }));
-
-        console.log("[product] add form options", {
-            brands: brands.length,
-            companies: companies.length,
-            manufacturers: manufacturers.length,
-            countries: countries.length,
-            currencies: currencies.length,
-        });
-
-        return { brands, companies, manufacturers, countries, currencies };
+        const res = await ingredientService.searchIngredients(term, page, size);
+        console.log("[product] addPanel ingredient search", { term, page, count: res.list.length });
+        return { term, page, list: res.list, pagination: res.pagination };
     },
 );

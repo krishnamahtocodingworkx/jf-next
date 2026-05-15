@@ -1,5 +1,7 @@
 import * as Yup from "yup";
 import { AUTH_CONSTANTS } from "@/utils/constants";
+import { isValidMongoObjectId } from "@/utils/commonFunctions";
+import type { AddProductFormValues, AddProductPickedIngredient } from "@/utils/model";
 import {
   emailRegExp,
   passRegExp,
@@ -89,3 +91,70 @@ export const loginSchema = LoginSchema();
 export const registerSchema = RegisterSchema();
 export const forgotPasswordSchema = ForgotPasswordSchema();
 export const recoveryPasswordSchema = RecoveryPasswordSchema();
+
+/** Add Product form — company + name + optional manufacturer (Mongo ids). */
+export const AddProductFormSchema = () =>
+  Yup.object({
+    company: Yup.string()
+      .trim()
+      .required("Please select a company from the list.")
+      .test("company-id", "Please select a company from the list.", (v) =>
+        isValidMongoObjectId(String(v ?? "").trim()),
+      ),
+    name: Yup.string().trim().required("Product name is required"),
+    manufacturer: Yup.string().test(
+      "manufacturer-id",
+      "Please select a manufacturer from the list, or leave it blank.",
+      (v) => {
+        const s = String(v ?? "").trim();
+        if (!s) return true;
+        return isValidMongoObjectId(s);
+      },
+    ),
+    category: Yup.string().default(""),
+    productType: Yup.string().default(""),
+    subcategory: Yup.string().default(""),
+    sku: Yup.string().default(""),
+    brand: Yup.string().default(""),
+    flavor: Yup.string().default(""),
+    dateCreated: Yup.string().default(""),
+    fulfilmentDate: Yup.string().default(""),
+    servingSize: Yup.string().default("0"),
+    servingUnit: Yup.string().default("g"),
+    status: Yup.mixed<AddProductFormValues["status"]>()
+      .oneOf(["active", "concept", "discontinued"])
+      .default("active"),
+    guavaEnabled: Yup.boolean().default(true),
+    hasAdditives: Yup.boolean().default(false),
+    guavaScore: Yup.string().default(""),
+    upcCode: Yup.string().default(""),
+    cost: Yup.string().default("0"),
+    retailCost: Yup.string().default("0"),
+    country: Yup.string().default(""),
+    currency: Yup.string().default(""),
+    objectives: Yup.array().of(Yup.string().defined()).default([]),
+    notes: Yup.string().default(""),
+  });
+
+export const addProductFormSchema = AddProductFormSchema();
+
+export function getAddProductFormValidationError(
+  values: AddProductFormValues,
+): string | undefined {
+  try {
+    addProductFormSchema.validateSync(values, { abortEarly: true });
+    return undefined;
+  } catch (e) {
+    if (e instanceof Yup.ValidationError) return e.message;
+    return "Validation failed.";
+  }
+}
+
+export function getAddProductIngredientSelectionError(
+  picked: AddProductPickedIngredient[],
+): string | undefined {
+  if (picked.some((i) => Number(i.weight) <= 0)) {
+    return "Each selected ingredient must have weight greater than 0.";
+  }
+  return undefined;
+}

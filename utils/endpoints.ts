@@ -17,18 +17,17 @@ export const ENDPOINTS = {
   USER: {
     PROFILE: `${API}/users/`,
     PERMISSIONS: `${API}/user/access-permissions`,
-    BRANDS: `${API}/user/brands/`,
   },
   COMPANY: {
     /** List companies for selects (Add Product), */
     LIST_FOR_SELECT: `${API}/companies/`,
   },
   PRODUCT_BRAND: {
-    GET_BY_ID: (productId: string) => `${API}/productBrand/get-product-brand/${productId}`,
+    /** All brands for Add Product select. */
+    LIST: `${API}/productBrand/get-product-brand`,
   },
   INGREDIENT: {
     GET_INGREDIENT_LIST: `${API}/ingredient/get-ingredient-list`,
-    ADD_INGREDIENT: `${API}/ingredient/add-ingredient`,
   },
   INGREDIENTS: {
     SEARCH: (name: string) => `${API}/ingredients/${encodeURIComponent(name)}/search/`,
@@ -51,6 +50,9 @@ export const ENDPOINTS = {
   },
   CURRENCY: {
     LIST: `${API}/currency/currency-list`,
+  },
+  PRODUCT_TYPE: {
+    CATEGORY_LIST: `${API}/productType/category-list`,
   },
   ANALYTICS: {
     INGREDIENT_USAGE: `${API}/ingredients/usage/`,

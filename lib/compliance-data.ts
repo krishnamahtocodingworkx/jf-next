@@ -1,5 +1,7 @@
 // ─── Compliance Types ─────────────────────────────────────────────────────────
 
+import { COMPLIANCE_REGION_DISPLAY } from "@/utils/enum"
+
 export type ComplianceStatus = "compliant" | "review-needed" | "blocked" | "pending"
 export type RuleSeverity = "critical" | "warning" | "info"
 export type RegulatorySource = "FDA" | "EFSA" | "EU" | "USDA" | "FSANZ" | "Health Canada" | "UK FSA" | "Codex"
@@ -88,226 +90,6 @@ export interface MarketSelection {
   regions: string[] // Selected region codes
   countries: string[] // Selected country codes (overrides regional selection)
 }
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-export const regions: Region[] = [
-  {
-    code: "NA",
-    name: "North America",
-    flag: "🌎",
-    countries: [
-      { code: "US", name: "United States", flag: "🇺🇸", regionCode: "NA" },
-      { code: "CA", name: "Canada", flag: "🇨🇦", regionCode: "NA" },
-      { code: "MX", name: "Mexico", flag: "🇲🇽", regionCode: "NA" },
-      { code: "GT", name: "Guatemala", flag: "🇬🇹", regionCode: "NA" },
-      { code: "BZ", name: "Belize", flag: "🇧🇿", regionCode: "NA" },
-      { code: "HN", name: "Honduras", flag: "🇭🇳", regionCode: "NA" },
-      { code: "SV", name: "El Salvador", flag: "🇸🇻", regionCode: "NA" },
-      { code: "NI", name: "Nicaragua", flag: "🇳🇮", regionCode: "NA" },
-      { code: "CR", name: "Costa Rica", flag: "🇨🇷", regionCode: "NA" },
-      { code: "PA", name: "Panama", flag: "🇵🇦", regionCode: "NA" },
-      { code: "CU", name: "Cuba", flag: "🇨🇺", regionCode: "NA" },
-      { code: "JM", name: "Jamaica", flag: "🇯🇲", regionCode: "NA" },
-      { code: "HT", name: "Haiti", flag: "🇭🇹", regionCode: "NA" },
-      { code: "DO", name: "Dominican Republic", flag: "🇩🇴", regionCode: "NA" },
-      { code: "PR", name: "Puerto Rico", flag: "🇵🇷", regionCode: "NA" },
-      { code: "TT", name: "Trinidad and Tobago", flag: "🇹🇹", regionCode: "NA" },
-      { code: "BB", name: "Barbados", flag: "🇧🇧", regionCode: "NA" },
-    ],
-  },
-  {
-    code: "EU",
-    name: "European Union",
-    flag: "🇪🇺",
-    countries: [
-      { code: "DE", name: "Germany", flag: "🇩🇪", regionCode: "EU" },
-      { code: "FR", name: "France", flag: "🇫🇷", regionCode: "EU" },
-      { code: "IT", name: "Italy", flag: "🇮🇹", regionCode: "EU" },
-      { code: "ES", name: "Spain", flag: "🇪🇸", regionCode: "EU" },
-      { code: "NL", name: "Netherlands", flag: "🇳🇱", regionCode: "EU" },
-      { code: "BE", name: "Belgium", flag: "🇧🇪", regionCode: "EU" },
-      { code: "PL", name: "Poland", flag: "🇵🇱", regionCode: "EU" },
-      { code: "SE", name: "Sweden", flag: "🇸🇪", regionCode: "EU" },
-      { code: "AT", name: "Austria", flag: "🇦🇹", regionCode: "EU" },
-      { code: "BG", name: "Bulgaria", flag: "🇧🇬", regionCode: "EU" },
-      { code: "HR", name: "Croatia", flag: "🇭🇷", regionCode: "EU" },
-      { code: "CY", name: "Cyprus", flag: "🇨🇾", regionCode: "EU" },
-      { code: "CZ", name: "Czech Republic", flag: "🇨🇿", regionCode: "EU" },
-      { code: "DK", name: "Denmark", flag: "🇩🇰", regionCode: "EU" },
-      { code: "EE", name: "Estonia", flag: "🇪🇪", regionCode: "EU" },
-      { code: "FI", name: "Finland", flag: "🇫🇮", regionCode: "EU" },
-      { code: "GR", name: "Greece", flag: "🇬🇷", regionCode: "EU" },
-      { code: "HU", name: "Hungary", flag: "🇭🇺", regionCode: "EU" },
-      { code: "IE", name: "Ireland", flag: "🇮🇪", regionCode: "EU" },
-      { code: "LV", name: "Latvia", flag: "🇱🇻", regionCode: "EU" },
-      { code: "LT", name: "Lithuania", flag: "🇱🇹", regionCode: "EU" },
-      { code: "LU", name: "Luxembourg", flag: "🇱🇺", regionCode: "EU" },
-      { code: "MT", name: "Malta", flag: "🇲🇹", regionCode: "EU" },
-      { code: "PT", name: "Portugal", flag: "🇵🇹", regionCode: "EU" },
-      { code: "RO", name: "Romania", flag: "🇷🇴", regionCode: "EU" },
-      { code: "SK", name: "Slovakia", flag: "🇸🇰", regionCode: "EU" },
-      { code: "SI", name: "Slovenia", flag: "🇸🇮", regionCode: "EU" },
-    ],
-  },
-  {
-    code: "UK",
-    name: "United Kingdom",
-    flag: "🇬🇧",
-    countries: [
-      { code: "GB", name: "Great Britain", flag: "🇬🇧", regionCode: "UK" },
-      { code: "IM", name: "Isle of Man", flag: "🇮🇲", regionCode: "UK" },
-      { code: "GG", name: "Guernsey", flag: "🇬🇬", regionCode: "UK" },
-      { code: "JE", name: "Jersey", flag: "🇯🇪", regionCode: "UK" },
-    ],
-  },
-  {
-    code: "EUROPE",
-    name: "Rest of Europe",
-    flag: "🌍",
-    countries: [
-      { code: "NO", name: "Norway", flag: "🇳🇴", regionCode: "EUROPE" },
-      { code: "CH", name: "Switzerland", flag: "🇨🇭", regionCode: "EUROPE" },
-      { code: "IS", name: "Iceland", flag: "🇮🇸", regionCode: "EUROPE" },
-      { code: "LI", name: "Liechtenstein", flag: "🇱🇮", regionCode: "EUROPE" },
-      { code: "AL", name: "Albania", flag: "🇦🇱", regionCode: "EUROPE" },
-      { code: "AD", name: "Andorra", flag: "🇦🇩", regionCode: "EUROPE" },
-      { code: "AM", name: "Armenia", flag: "🇦🇲", regionCode: "EUROPE" },
-      { code: "AZ", name: "Azerbaijan", flag: "🇦🇿", regionCode: "EUROPE" },
-      { code: "BY", name: "Belarus", flag: "🇧🇾", regionCode: "EUROPE" },
-      { code: "BA", name: "Bosnia and Herzegovina", flag: "🇧🇦", regionCode: "EUROPE" },
-      { code: "GE", name: "Georgia", flag: "🇬🇪", regionCode: "EUROPE" },
-      { code: "KZ", name: "Kazakhstan", flag: "🇰🇿", regionCode: "EUROPE" },
-      { code: "XK", name: "Kosovo", flag: "🇽🇰", regionCode: "EUROPE" },
-      { code: "MK", name: "North Macedonia", flag: "🇲🇰", regionCode: "EUROPE" },
-      { code: "MD", name: "Moldova", flag: "🇲🇩", regionCode: "EUROPE" },
-      { code: "MC", name: "Monaco", flag: "🇲🇨", regionCode: "EUROPE" },
-      { code: "ME", name: "Montenegro", flag: "🇲🇪", regionCode: "EUROPE" },
-      { code: "RS", name: "Serbia", flag: "🇷🇸", regionCode: "EUROPE" },
-      { code: "SM", name: "San Marino", flag: "🇸🇲", regionCode: "EUROPE" },
-      { code: "TR", name: "Turkey", flag: "🇹🇷", regionCode: "EUROPE" },
-      { code: "UA", name: "Ukraine", flag: "🇺🇦", regionCode: "EUROPE" },
-      { code: "VA", name: "Vatican City", flag: "🇻🇦", regionCode: "EUROPE" },
-      { code: "RU", name: "Russia", flag: "🇷🇺", regionCode: "EUROPE" },
-    ],
-  },
-  {
-    code: "APAC",
-    name: "Asia Pacific",
-    flag: "🌏",
-    countries: [
-      { code: "AU", name: "Australia", flag: "🇦🇺", regionCode: "APAC" },
-      { code: "NZ", name: "New Zealand", flag: "🇳🇿", regionCode: "APAC" },
-      { code: "JP", name: "Japan", flag: "🇯🇵", regionCode: "APAC" },
-      { code: "KR", name: "South Korea", flag: "🇰🇷", regionCode: "APAC" },
-      { code: "SG", name: "Singapore", flag: "🇸🇬", regionCode: "APAC" },
-      { code: "CN", name: "China", flag: "🇨🇳", regionCode: "APAC" },
-      { code: "HK", name: "Hong Kong", flag: "🇭🇰", regionCode: "APAC" },
-      { code: "TW", name: "Taiwan", flag: "🇹🇼", regionCode: "APAC" },
-      { code: "IN", name: "India", flag: "🇮🇳", regionCode: "APAC" },
-      { code: "PK", name: "Pakistan", flag: "🇵🇰", regionCode: "APAC" },
-      { code: "BD", name: "Bangladesh", flag: "🇧🇩", regionCode: "APAC" },
-      { code: "LK", name: "Sri Lanka", flag: "🇱🇰", regionCode: "APAC" },
-      { code: "NP", name: "Nepal", flag: "🇳🇵", regionCode: "APAC" },
-      { code: "MM", name: "Myanmar", flag: "🇲🇲", regionCode: "APAC" },
-      { code: "TH", name: "Thailand", flag: "🇹🇭", regionCode: "APAC" },
-      { code: "VN", name: "Vietnam", flag: "🇻🇳", regionCode: "APAC" },
-      { code: "PH", name: "Philippines", flag: "🇵🇭", regionCode: "APAC" },
-      { code: "MY", name: "Malaysia", flag: "🇲🇾", regionCode: "APAC" },
-      { code: "ID", name: "Indonesia", flag: "🇮🇩", regionCode: "APAC" },
-      { code: "KH", name: "Cambodia", flag: "🇰🇭", regionCode: "APAC" },
-      { code: "LA", name: "Laos", flag: "🇱🇦", regionCode: "APAC" },
-      { code: "BN", name: "Brunei", flag: "🇧🇳", regionCode: "APAC" },
-      { code: "TL", name: "Timor-Leste", flag: "🇹🇱", regionCode: "APAC" },
-      { code: "MN", name: "Mongolia", flag: "🇲🇳", regionCode: "APAC" },
-      { code: "FJ", name: "Fiji", flag: "🇫🇯", regionCode: "APAC" },
-      { code: "PG", name: "Papua New Guinea", flag: "🇵🇬", regionCode: "APAC" },
-    ],
-  },
-  {
-    code: "LATAM",
-    name: "Latin America",
-    flag: "🌎",
-    countries: [
-      { code: "BR", name: "Brazil", flag: "🇧🇷", regionCode: "LATAM" },
-      { code: "AR", name: "Argentina", flag: "🇦🇷", regionCode: "LATAM" },
-      { code: "CL", name: "Chile", flag: "🇨🇱", regionCode: "LATAM" },
-      { code: "CO", name: "Colombia", flag: "🇨🇴", regionCode: "LATAM" },
-      { code: "PE", name: "Peru", flag: "🇵🇪", regionCode: "LATAM" },
-      { code: "VE", name: "Venezuela", flag: "🇻🇪", regionCode: "LATAM" },
-      { code: "EC", name: "Ecuador", flag: "🇪🇨", regionCode: "LATAM" },
-      { code: "BO", name: "Bolivia", flag: "🇧🇴", regionCode: "LATAM" },
-      { code: "PY", name: "Paraguay", flag: "🇵🇾", regionCode: "LATAM" },
-      { code: "UY", name: "Uruguay", flag: "🇺🇾", regionCode: "LATAM" },
-      { code: "GY", name: "Guyana", flag: "🇬🇾", regionCode: "LATAM" },
-      { code: "SR", name: "Suriname", flag: "🇸🇷", regionCode: "LATAM" },
-    ],
-  },
-  {
-    code: "MEA",
-    name: "Middle East & Africa",
-    flag: "🌍",
-    countries: [
-      { code: "AE", name: "United Arab Emirates", flag: "🇦🇪", regionCode: "MEA" },
-      { code: "SA", name: "Saudi Arabia", flag: "🇸🇦", regionCode: "MEA" },
-      { code: "IL", name: "Israel", flag: "🇮🇱", regionCode: "MEA" },
-      { code: "EG", name: "Egypt", flag: "🇪🇬", regionCode: "MEA" },
-      { code: "NG", name: "Nigeria", flag: "🇳🇬", regionCode: "MEA" },
-      { code: "ZA", name: "South Africa", flag: "🇿🇦", regionCode: "MEA" },
-      { code: "KE", name: "Kenya", flag: "🇰🇪", regionCode: "MEA" },
-      { code: "ET", name: "Ethiopia", flag: "🇪🇹", regionCode: "MEA" },
-      { code: "GH", name: "Ghana", flag: "🇬🇭", regionCode: "MEA" },
-      { code: "TZ", name: "Tanzania", flag: "🇹🇿", regionCode: "MEA" },
-      { code: "UG", name: "Uganda", flag: "🇺🇬", regionCode: "MEA" },
-      { code: "DZ", name: "Algeria", flag: "🇩🇿", regionCode: "MEA" },
-      { code: "MA", name: "Morocco", flag: "🇲🇦", regionCode: "MEA" },
-      { code: "TN", name: "Tunisia", flag: "🇹🇳", regionCode: "MEA" },
-      { code: "LY", name: "Libya", flag: "🇱🇾", regionCode: "MEA" },
-      { code: "SD", name: "Sudan", flag: "🇸🇩", regionCode: "MEA" },
-      { code: "QA", name: "Qatar", flag: "🇶🇦", regionCode: "MEA" },
-      { code: "KW", name: "Kuwait", flag: "🇰🇼", regionCode: "MEA" },
-      { code: "BH", name: "Bahrain", flag: "🇧🇭", regionCode: "MEA" },
-      { code: "OM", name: "Oman", flag: "🇴🇲", regionCode: "MEA" },
-      { code: "JO", name: "Jordan", flag: "🇯🇴", regionCode: "MEA" },
-      { code: "LB", name: "Lebanon", flag: "🇱🇧", regionCode: "MEA" },
-      { code: "IQ", name: "Iraq", flag: "🇮🇶", regionCode: "MEA" },
-      { code: "IR", name: "Iran", flag: "🇮🇷", regionCode: "MEA" },
-      { code: "SY", name: "Syria", flag: "🇸🇾", regionCode: "MEA" },
-      { code: "YE", name: "Yemen", flag: "🇾🇪", regionCode: "MEA" },
-      { code: "CI", name: "Cote d'Ivoire", flag: "🇨🇮", regionCode: "MEA" },
-      { code: "CM", name: "Cameroon", flag: "🇨🇲", regionCode: "MEA" },
-      { code: "SN", name: "Senegal", flag: "🇸🇳", regionCode: "MEA" },
-      { code: "ZM", name: "Zambia", flag: "🇿🇲", regionCode: "MEA" },
-      { code: "ZW", name: "Zimbabwe", flag: "🇿🇼", regionCode: "MEA" },
-      { code: "MZ", name: "Mozambique", flag: "🇲🇿", regionCode: "MEA" },
-      { code: "AO", name: "Angola", flag: "🇦🇴", regionCode: "MEA" },
-      { code: "RW", name: "Rwanda", flag: "🇷🇼", regionCode: "MEA" },
-      { code: "MG", name: "Madagascar", flag: "🇲🇬", regionCode: "MEA" },
-      { code: "MU", name: "Mauritius", flag: "🇲🇺", regionCode: "MEA" },
-    ],
-  },
-  {
-    code: "SA",
-    name: "South Asia",
-    flag: "🌏",
-    countries: [
-      { code: "AF", name: "Afghanistan", flag: "🇦🇫", regionCode: "SA" },
-      { code: "MV", name: "Maldives", flag: "🇲🇻", regionCode: "SA" },
-      { code: "BT", name: "Bhutan", flag: "🇧🇹", regionCode: "SA" },
-    ],
-  },
-  {
-    code: "CIS",
-    name: "Central Asia",
-    flag: "🌏",
-    countries: [
-      { code: "UZ", name: "Uzbekistan", flag: "🇺🇿", regionCode: "CIS" },
-      { code: "KG", name: "Kyrgyzstan", flag: "🇰🇬", regionCode: "CIS" },
-      { code: "TJ", name: "Tajikistan", flag: "🇹🇯", regionCode: "CIS" },
-      { code: "TM", name: "Turkmenistan", flag: "🇹🇲", regionCode: "CIS" },
-    ],
-  },
-]
 
 export const regulatoryRules: RegulatoryRule[] = [
   {
@@ -646,14 +428,14 @@ export function getComplianceLabel(status: ComplianceStatus): string {
 }
 
 export function getRegionByCode(code: string): Region | undefined {
-  return regions.find(r => r.code === code)
+  const clean = String(code || "").trim()
+  const meta = COMPLIANCE_REGION_DISPLAY[clean]
+  if (!meta) return undefined
+  return { code: clean, name: meta.name, flag: meta.flag, countries: [] }
 }
 
-export function getCountryByCode(code: string): Country | undefined {
-  for (const region of regions) {
-    const country = region.countries.find(c => c.code === code)
-    if (country) return country
-  }
+/** Country rows are sourced from API; this helper stays for compatibility. */
+export function getCountryByCode(_code: string): Country | undefined {
   return undefined
 }
 
