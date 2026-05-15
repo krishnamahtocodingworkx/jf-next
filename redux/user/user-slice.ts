@@ -1,22 +1,17 @@
+// Auth slice — owns the tokens, signed-in flag, and AuthUser profile. Persisted via redux-persist.
 import { createSlice } from "@reduxjs/toolkit";
 import { storage } from "@/lib/storage";
 import { forgotPassword, manualLogin, registerUser, resetPassword } from "@/redux/user/user-thunks";
-import type { UserState } from "@/redux/user/user-types";
+import { createInitialUserState } from "@/utils/auth-helpers";
 
-const initialState: UserState = {
-  isLoggedIn: false,
-  authState: "signed_out",
-  accessToken: "",
-  refreshToken: "",
-  idToken: "",
-  details: null,
-  loading: false,
-  error: "",
-}
+/** Default state on first load / after logout / when the persisted blob is empty. */
+const initialState = createInitialUserState();
+
 const userSlice = createSlice({
   name: "user",
-  initialState: initialState,
+  initialState,
   reducers: {
+    /** Clears tokens in both localStorage and Redux state — invoked from navbar logout / interceptor 401. */
     logout(state) {
       storage.removeItem("access_token");
       storage.removeItem("refresh_token");
@@ -29,6 +24,7 @@ const userSlice = createSlice({
       state.details = null;
       state.error = "";
     },
+    /** Refresh-token flow updates tokens in place without touching `isLoggedIn`. */
     updateTokens(
       state,
       action: {
@@ -37,17 +33,17 @@ const userSlice = createSlice({
           refreshToken?: string;
           idToken: string;
         };
-      }
+      },
     ) {
       state.accessToken = action.payload.accessToken;
       state.idToken = action.payload.idToken;
-
       if (action.payload.refreshToken) {
         state.refreshToken = action.payload.refreshToken;
       }
     },
   },
   extraReducers: (builder) => {
+    // ── manualLogin: pending starts the spinner; fulfilled hydrates tokens + AuthUser; rejected surfaces the error.
     builder.addCase(manualLogin.pending, (state) => {
       state.loading = true;
       state.error = "";
@@ -66,6 +62,7 @@ const userSlice = createSlice({
       state.error = (action.payload as string) || "";
     });
 
+    // ── registerUser: only flips the loading flag; navigation + toasts happen on the Register page.
     builder.addCase(registerUser.pending, (state) => {
       state.loading = true;
       state.error = "";
@@ -78,6 +75,7 @@ const userSlice = createSlice({
       state.error = (action.payload as string) || "";
     });
 
+    // ── forgotPassword: identical loading lifecycle; the Firebase email is fire-and-forget on the page.
     builder.addCase(forgotPassword.pending, (state) => {
       state.loading = true;
       state.error = "";
@@ -90,6 +88,7 @@ const userSlice = createSlice({
       state.error = (action.payload as string) || "";
     });
 
+    // ── resetPassword: same lifecycle pattern; the page navigates back to login on success.
     builder.addCase(resetPassword.pending, (state) => {
       state.loading = true;
       state.error = "";

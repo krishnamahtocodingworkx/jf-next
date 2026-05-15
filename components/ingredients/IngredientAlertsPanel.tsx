@@ -1,5 +1,6 @@
 "use client";
 
+// Alerts widget on the Ingredients catalog page — dismissible cards for supply, audit, and price warnings.
 import { useState } from "react";
 import {
     AlertTriangle,

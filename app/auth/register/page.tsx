@@ -1,5 +1,6 @@
 "use client";
 
+// `/auth/register` — Formik form that dispatches `registerUser`; renders a success card on completion (email verification next).
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Formik } from "formik";
@@ -10,38 +11,33 @@ import { AuthSuccessCard } from "@/components/auth/AuthSuccessCard";
 import { routes } from "@/utils/routes";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { registerUser } from "@/redux/user/user-thunks";
-import { companyService } from "@/services/company-service";
 import { userService } from "@/services/user-service";
 import { REGISTER_INITIAL_VALUES } from "@/utils/initialValues";
 import { AUTH_STRINGS } from "@/utils/strings";
 import { USER_ROLES } from "@/utils/constants";
 import { visibleFormikFieldError } from "@/utils/commonFunctions";
 import { registerSchema } from "@/utils/validationSchema";
+import type { SelectOption } from "@/utils/model";
 
 export default function RegisterPage() {
   const dispatch = useAppDispatch();
   const { loading } = useAppSelector((state) => state.user);
   const [isSuccess, setIsSuccess] = useState(false);
   const [successEmail, setSuccessEmail] = useState("");
-  const [companyTypes, setCompanyTypes] = useState<Array<{ id: string; title: string }>>([]);
+  const [companyTypes, setCompanyTypes] = useState<SelectOption[]>([]);
   const [countries, setCountries] = useState<Array<{ id: string; name: string }>>([]);
 
+  // Load dropdown options once on mount — both calls run in parallel.
   useEffect(() => {
-    (async () => {
-      try {
-        const [types, normalizedCountries] = await Promise.all([
-          companyService.getProfileCompanyTypes(),
-          userService.getCountries(),
-        ]);
+    void Promise.all([userService.getCompanyTypeList(), userService.getCountries()]).then(
+      ([types, normalizedCountries]) => {
         setCompanyTypes(types);
         setCountries(normalizedCountries);
-        console.log("[auth] register company types loaded", types.length);
-      } catch (error) {
-        console.log("[auth] register options fetch failed", error);
-      }
-    })();
+      },
+    );
   }, []);
 
+  // Alphabetised country list for the select.
   const countryOptions = useMemo(
     () => [...countries].sort((a, b) => a.name.localeCompare(b.name)),
     [countries],
@@ -90,7 +86,6 @@ export default function RegisterPage() {
                 role: USER_ROLES.COMPANY_ADMIN,
               }),
             ).unwrap();
-            console.log("[auth] Register success", values.email);
             setSuccessEmail(values.email);
             setIsSuccess(true);
           } catch {
@@ -135,7 +130,7 @@ export default function RegisterPage() {
                 name="companyType"
                 placeholder="Select Company Type"
                 value={formik.values.companyType}
-                options={companyTypes.map((option) => ({ value: option.id, label: option.title }))}
+                options={companyTypes}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
                 error={visibleFormikFieldError(

@@ -1,5 +1,6 @@
 "use client";
 
+// Styled text input used by every auth form; toggles password visibility and renders the field-level error inline.
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 

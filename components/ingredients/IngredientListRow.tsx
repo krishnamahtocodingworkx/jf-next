@@ -1,5 +1,6 @@
 "use client";
 
+// List-view row for a single ingredient on the catalog page; dense layout for power users browsing many rows.
 import { ChevronRight, Leaf, Star } from "lucide-react";
 import type { IIngredientCatalogRow } from "@/interfaces/ingredient";
 

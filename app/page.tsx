@@ -1,5 +1,6 @@
 "use client";
 
+// Root `/` route — pure redirector. Sends signed-in users into the app, everyone else to the login page.
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAppSelector } from "@/redux/hooks";
@@ -10,13 +11,7 @@ export default function HomePage() {
   const isLoggedIn = useAppSelector((state) => state.user.isLoggedIn);
 
   useEffect(() => {
-    if (isLoggedIn) {
-      console.log("[HomePage] logged-in user routed to app home");
-      router.replace(routes.APP_HOME);
-    } else {
-      console.log("[HomePage] guest routed to login");
-      router.replace(routes.LOGIN);
-    }
+    router.replace(isLoggedIn ? routes.APP_HOME : routes.LOGIN);
   }, [isLoggedIn, router]);
 
   return null;

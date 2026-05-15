@@ -1,5 +1,6 @@
 "use client";
 
+// Full ingredient detail view — rendered either as a side drawer (catalog row click) or as a standalone page (`/ingredients/[id]`).
 import { useMemo, useState } from "react";
 import {
     Apple,

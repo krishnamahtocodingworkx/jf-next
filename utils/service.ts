@@ -1,30 +1,34 @@
+// Shared axios instance: attaches the Firebase idToken on every request and runs the silent refresh-token
+// retry on 401. Other services import `api` from here (or via `@/services/api`).
 import axios, {
   AxiosError,
   AxiosInstance,
   AxiosResponse,
   InternalAxiosRequestConfig,
 } from "axios";
+import { signInWithCustomToken } from "firebase/auth";
 import { parseBackendMessageBody } from "@/utils/commonFunctions";
 import SHOW_ERROR_TOAST, { SHOW_INTERNET_TOAST } from "@/utils/showToast";
 import { storage } from "@/lib/storage";
 import { ENDPOINTS } from "@/utils/endpoints";
 import { routes } from "@/utils/routes";
-import { signInWithCustomToken } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
 const SOMETHING_WENT_WRONG = "OOPS! Something went wrong";
 const BASE_URL = ENDPOINTS.BASE_URL || "";
+const REQUEST_TIMEOUT_MS = 30_000;
 
+/** Named HTTP status codes used across the app — avoids magic numbers in error handling. */
 export const STATUS_CODE = {
   success: 200,
-  invalid: 400,
-  timeout: 408,
+  successAction: 201,
   notFound: 204,
+  invalid: 400,
   badRequest: 400,
+  Unauthorized: 401,
+  timeout: 408,
   userDelete: 410,
   serverError: 500,
-  Unauthorized: 401,
-  successAction: 201,
 } as const;
 
 export type ApiResponse<T = unknown> = {
@@ -40,283 +44,136 @@ export type ErrorResponse = {
 
 type RetriableConfig = InternalAxiosRequestConfig & { _retry?: boolean };
 
-/** Rejects from axios interceptor (`{ message, status }`) — network/timeout already toasted in interceptor. */
+/** True if the axios interceptor already toasted a network/timeout failure. */
 export function interceptorHandledNetworkOrTimeout(error: unknown): boolean {
   const e = error as { status?: number };
   return e?.status === 0 || e?.status === STATUS_CODE.timeout;
 }
 
-const sessionExpireHandler = () => {
+/** Hard reset on auth failure — clears storage and forces a navigation back to the login screen. */
+function sessionExpireHandler() {
+  if (typeof window === "undefined") return;
   localStorage.clear();
-  if (typeof window !== "undefined") {
-    window.location.replace(routes.LOGIN);
-  }
-};
+  window.location.replace(routes.LOGIN);
+}
 
-const createAxiosInstance = (
-  baseURL: string,
-  headers: Record<string, string> = {},
-): AxiosInstance => {
-
-
+/** Builds the configured axios instance shared by all services. */
+function createAxiosInstance(baseURL: string): AxiosInstance {
   const instance = axios.create({
     baseURL,
-    timeout: 30000,
-    headers,
+    timeout: REQUEST_TIMEOUT_MS,
+    headers: { "Content-Type": "application/json" },
   });
 
-  instance.interceptors.request.use(async (config: InternalAxiosRequestConfig): Promise<InternalAxiosRequestConfig> => {
+  // Request interceptor — attaches the latest Firebase idToken from Redux on every outgoing request.
+  // Dynamic import avoids the circular dependency between `store` and the slice that updates these tokens.
+  instance.interceptors.request.use(async (config) => {
     const { store } = await import("@/redux/store");
-    const token = store.getState().user.idToken;
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    const idToken = store.getState().user.idToken;
+    if (idToken) {
+      config.headers.Authorization = `Bearer ${idToken}`;
     }
-
     return config;
   });
 
-  // instance.interceptors.response.use(
-  //   (response: AxiosResponse) => response,
-  //   async (error): Promise<ErrorResponse | AxiosResponse> => {
-  //     const axiosError = error as AxiosError;
-  //     const originalReq = axiosError.config as RetriableConfig | undefined;
-
-  //     if (!axiosError.response) {
-  //       if (axiosError.code === "ECONNABORTED") {
-  //         SHOW_ERROR_TOAST("Request timeout. Please try again.");
-  //         return Promise.reject({
-  //           message: "Request timeout. Please try again.",
-  //           status: STATUS_CODE.timeout,
-  //         });
-  //       }
-  //       SHOW_INTERNET_TOAST();
-  //       return Promise.reject({
-  //         message: "Network error. Please check your internet connection.",
-  //         status: 0,
-  //       });
-  //     }
-
-  //     const body = axiosError.response?.data as unknown;
-  //     const message =
-  //       parseBackendMessageBody(body) ??
-  //       (typeof body === "string" && body.trim() ? body.trim() : undefined) ??
-  //       axiosError.response?.statusText ??
-  //       axiosError.message ??
-  //       SOMETHING_WENT_WRONG;
-
-  //     const status: number = axiosError.response?.status ?? axiosError.status ?? 0;
-  //     const store = await import("@/redux/store");
-  //     const refreshToken = store.store.getState().user.refreshToken;
-  //     const errBody = (body as { detail?: string } | undefined) ?? undefined;
-  //     console.log("refresh token :", refreshToken);
-  //     debugger;
-  //     if (
-  //       status === STATUS_CODE.Unauthorized
-  //       &&
-  //       // originalReq &&
-  //       originalReq &&
-  //       refreshToken
-  //       // errBody?.detail === "INVALID TOKEN"
-  //     ) {
-  //       console.log("inside refresh token")
-  //       debugger;
-  //       // originalReq._retry = true;
-  //       try {
-  //         const res = await axios.post(baseURL + ENDPOINTS.AUTH.REFRESH_TOKEN, {
-  //           refresh_token: refreshToken,
-  //         });
-  //         console.log("refresh token response :", res);
-  //         debugger;
-  //         const accessToken = res.data.data?.accessToken;
-  //         const res2 = await signInWithCustomToken(auth, accessToken);
-  //         const idToken = await res2.user?.getIdToken();
-  //         // save access token
-  //         // save idToken in redux storage
-
-  //         return instance.request(originalReq);
-  //       } catch (refreshError) {
-  //         console.log("[api] refresh token failed", refreshError);
-  //         sessionExpireHandler();
-  //         return Promise.reject({ message, status });
-  //       }
-  //     }
-  //     console.log("outside of refresh token ");
-  //     debugger;
-
-  //     if (status === STATUS_CODE.Unauthorized) {
-  //       sessionExpireHandler();
-  //     }
-
-  //     return Promise.reject({ message, status });
-  //   },
-  // );
+  // Response interceptor — three responsibilities:
+  //   1) Toast network/timeout failures so every service doesn't repeat that handling.
+  //   2) On 401, attempt a silent refresh via the backend then replay the original request once.
+  //   3) Reshape errors into `{ message, status }` so callers can extract messages predictably.
   instance.interceptors.response.use(
     (response: AxiosResponse) => response,
-
     async (error): Promise<ErrorResponse | AxiosResponse> => {
       const axiosError = error as AxiosError;
-      const originalReq = axiosError.config as RetriableConfig;
+      const originalReq = axiosError.config as RetriableConfig | undefined;
 
       if (!axiosError.response) {
         if (axiosError.code === "ECONNABORTED") {
           SHOW_ERROR_TOAST("Request timeout. Please try again.");
-
           return Promise.reject({
             message: "Request timeout. Please try again.",
             status: STATUS_CODE.timeout,
           });
         }
-
         SHOW_INTERNET_TOAST();
-
         return Promise.reject({
           message: "Network error. Please check your internet connection.",
           status: 0,
         });
       }
 
-      const body = axiosError.response?.data as unknown;
-
+      const body = axiosError.response.data as unknown;
       const message =
         parseBackendMessageBody(body) ??
-        (typeof body === "string" && body.trim()
-          ? body.trim()
-          : undefined) ??
-        axiosError.response?.statusText ??
+        (typeof body === "string" && body.trim() ? body.trim() : undefined) ??
+        axiosError.response.statusText ??
         axiosError.message ??
         SOMETHING_WENT_WRONG;
+      const status = axiosError.response.status ?? axiosError.status ?? 0;
 
-      const status =
-        axiosError.response?.status ??
-        axiosError.status ??
-        0;
-
-      // =========================
-      // REFRESH TOKEN FLOW
-      // =========================
-
-      if (
-        status === STATUS_CODE.Unauthorized &&
-        originalReq &&
-        !originalReq._retry
-      ) {
+      // Silent refresh-token flow — runs at most once per failed request (`_retry` flag).
+      if (status === STATUS_CODE.Unauthorized && originalReq && !originalReq._retry) {
         originalReq._retry = true;
-
         try {
           const { store } = await import("@/redux/store");
-
-          const state = store.getState();
-
-          const refreshToken = state.user.refreshToken;
-
+          const refreshToken = store.getState().user.refreshToken;
           if (!refreshToken) {
             sessionExpireHandler();
-
-            return Promise.reject({
-              message: "Session expired",
-              status,
-            });
+            return Promise.reject({ message: "Session expired", status });
           }
 
-          // refresh api call
+          // Exchange the refresh token for a new access/refresh pair, then re-mint the Firebase idToken.
           const refreshResponse = await axios.post(
             BASE_URL + ENDPOINTS.AUTH.REFRESH_TOKEN,
-            {
-              refresh_token: refreshToken,
-            }
+            { refresh_token: refreshToken },
           );
+          const newAccessToken = refreshResponse.data.data?.accessToken;
+          const newRefreshToken = refreshResponse.data.data?.refreshToken;
 
-          // backend response
-          const newAccessToken =
-            refreshResponse.data.data?.accessToken;
+          const firebaseRes = await signInWithCustomToken(auth, newAccessToken);
+          const newIdToken = await firebaseRes.user.getIdToken();
 
-          const newRefreshToken =
-            refreshResponse.data.data?.refreshToken;
-
-          // Firebase login again
-          const firebaseRes = await signInWithCustomToken(
-            auth,
-            newAccessToken
-          );
-
-          const newIdToken =
-            await firebaseRes.user.getIdToken();
-
-          // save storage
+          // Persist new tokens to both storage and Redux so subsequent requests use them.
           storage.setItem("access_token", newAccessToken);
-
-          storage.setItem(
-            "refresh_token",
-            newRefreshToken || refreshToken
-          );
-
+          storage.setItem("refresh_token", newRefreshToken || refreshToken);
           storage.setItem("idToken", newIdToken);
 
-          // update redux
-          const { updateTokens } = await import(
-            "@/redux/user/user-slice"
-          );
-
+          const { updateTokens } = await import("@/redux/user/user-slice");
           store.dispatch(
             updateTokens({
               accessToken: newAccessToken,
               refreshToken: newRefreshToken,
               idToken: newIdToken,
-            })
+            }),
           );
 
-          // update failed request token
+          // Replay the original request with the fresh token.
           originalReq.headers.Authorization = `Bearer ${newIdToken}`;
-
-          // retry request
           return instance(originalReq);
-        } catch (refreshError) {
-          console.log(
-            "[api] refresh token failed",
-            refreshError
-          );
-
+        } catch {
           sessionExpireHandler();
-
-          return Promise.reject({
-            message: "Session expired",
-            status,
-          });
+          return Promise.reject({ message: "Session expired", status });
         }
       }
-
-      // =========================
-      // NORMAL ERROR
-      // =========================
 
       if (status === STATUS_CODE.Unauthorized) {
         sessionExpireHandler();
       }
 
-      return Promise.reject({
-        message,
-        status,
-      });
-    }
+      return Promise.reject({ message, status });
+    },
   );
 
   return instance;
-};
+}
 
-export const api = createAxiosInstance(BASE_URL, {
-  "Content-Type": "application/json",
-});
+/** The shared axios client — every service imports this. */
+export const api = createAxiosInstance(BASE_URL);
 
-/**
- * Lightweight error toast wrapper
- * `Api.handleError(err, title)` helper, but tailored to the
- * `{ message, status }` shape produced by our interceptor.
- */
+/** Toast wrapper for the `{ message, status }` shape produced by the interceptor. */
 export function handleApiError(error: unknown, title?: string): void {
   if (interceptorHandledNetworkOrTimeout(error)) return;
   const e = error as { message?: string; status?: number };
   if (e?.status === STATUS_CODE.Unauthorized) return;
   const message = e?.message || SOMETHING_WENT_WRONG;
-  console.log("[api] handleApiError", title, message);
   SHOW_ERROR_TOAST(title ? `${title}: ${message}` : message);
 }

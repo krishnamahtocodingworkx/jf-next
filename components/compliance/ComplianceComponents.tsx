@@ -18,17 +18,9 @@ import {
   Check,
   Info,
 } from "lucide-react"
-import {
-  type ComplianceStatus,
-  type RuleSeverity,
-  type ComplianceIssue,
-  type Region,
-  type Country,
-  type RegulatoryRule,
-  getComplianceStatusColor,
-  getSeverityColor,
-  getComplianceLabel,
-} from "@/lib/compliance-data"
+import { getComplianceStatusColor, getSeverityColor, getComplianceLabel } from "@/utils/mockData"
+import type { ComplianceStatus, RuleSeverity } from "@/utils/model"
+import type { ComplianceIssue, Region, Country, RegulatoryRule } from "@/interfaces/compliance"
 import { COMPLIANCE_MARKET_REGION_ORDER, COMPLIANCE_REGION_DISPLAY } from "@/utils/enum"
 
 // ─── Compliance Badge ─────────────────────────────────────────────────────────

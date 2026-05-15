@@ -1,3 +1,5 @@
+// Yup schemas for every Formik form in the app. Each schema is exported both as a factory (for fresh instances)
+// and as a cached default at the bottom of the file (preferred for Formik's `validationSchema` prop).
 import * as Yup from "yup";
 import { AUTH_CONSTANTS } from "@/utils/constants";
 import { isValidMongoObjectId } from "@/utils/commonFunctions";
@@ -10,6 +12,7 @@ import {
   nameRegExp,
 } from "@/utils/validation";
 
+/** Login form — email + strong password. */
 export const LoginSchema = () =>
   Yup.object().shape({
     email: Yup.string()
@@ -24,6 +27,7 @@ export const LoginSchema = () =>
       .matches(passRegExp, passwordError),
   });
 
+/** Register form — full profile + strong password + match confirm. */
 export const RegisterSchema = () =>
   Yup.object().shape({
     firstName: Yup.string()
@@ -64,6 +68,7 @@ export const RegisterSchema = () =>
       .oneOf([Yup.ref("password")], "Password and Confirm Password must match"),
   });
 
+/** Forgot password — only the email field. */
 export const ForgotPasswordSchema = () =>
   Yup.object().shape({
     email: Yup.string()
@@ -72,6 +77,7 @@ export const ForgotPasswordSchema = () =>
       .matches(emailRegExp, "Please enter valid Email"),
   });
 
+/** Recovery / reset password — new password + confirm. */
 export const RecoveryPasswordSchema = () =>
   Yup.object().shape({
     password: Yup.string()
@@ -86,13 +92,13 @@ export const RecoveryPasswordSchema = () =>
       .oneOf([Yup.ref("password")], "Password and Confirm Password must match"),
   });
 
-/** Cached schemas for Formik `validationSchema` prop */
+// Cached schemas — preferred for Formik `validationSchema` so Yup doesn't rebuild the tree per render.
 export const loginSchema = LoginSchema();
 export const registerSchema = RegisterSchema();
 export const forgotPasswordSchema = ForgotPasswordSchema();
 export const recoveryPasswordSchema = RecoveryPasswordSchema();
 
-/** Add Product form — company + name + optional manufacturer (Mongo ids). */
+/** Add Product form — company id + product name + optional manufacturer (Mongo-style ids). */
 export const AddProductFormSchema = () =>
   Yup.object({
     company: Yup.string()
@@ -136,8 +142,10 @@ export const AddProductFormSchema = () =>
     notes: Yup.string().default(""),
   });
 
+/** Cached instance used by the Add Product panel. */
 export const addProductFormSchema = AddProductFormSchema();
 
+/** Returns the first form-level error message (e.g. for inline display in the panel header). */
 export function getAddProductFormValidationError(
   values: AddProductFormValues,
 ): string | undefined {
@@ -150,6 +158,7 @@ export function getAddProductFormValidationError(
   }
 }
 
+/** Cross-row validator for the ingredient list (Yup can't easily express "every weight > 0"). */
 export function getAddProductIngredientSelectionError(
   picked: AddProductPickedIngredient[],
 ): string | undefined {

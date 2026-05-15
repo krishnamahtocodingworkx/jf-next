@@ -1,11 +1,11 @@
 "use client";
 
+// Side panel for creating a new product — lazy-loads its dropdowns, debounces the ingredient search,
+// validates the form, then POSTs through `productService.addProduct`. Parent owns mount lifecycle.
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { Package, Save, X } from "lucide-react";
-import {
-  productService,
-  buildCreateProductPayload,
-} from "@/services/product-service";
+import { productService } from "@/services/product-service";
+import { buildCreateProductPayload } from "@/utils/product-helpers";
 import { notifyApiSuccessToast } from "@/utils/showToast";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
@@ -65,11 +65,7 @@ const selectField = twMerge(
 const selectMuted = twMerge(clsx(selectField, "bg-slate-50"));
 const chk = "h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500";
 
-export default function AddProductPanel({
-  open,
-  onClose,
-  onCreated,
-}: AddProductPanelProps) {
+export default function AddProductPanel({ onClose, onCreated }: AddProductPanelProps) {
   const dispatch = useAppDispatch();
   const profile = useAppSelector((s) => s.user.details);
   const addPanel = useAppSelector((s) => s.product.addPanel);
@@ -85,6 +81,7 @@ export default function AddProductPanel({
   >([]);
   const [ingredientError, setIngredientError] = useState("");
 
+  // Derived profit-margin % shown next to the price fields (clamped 0–100).
   const costMarginDisplay = useMemo(() => {
     const c = Number(formData.cost) || 0;
     const m = Number(formData.retailCost) || 0;
@@ -94,52 +91,50 @@ export default function AddProductPanel({
     return String(Math.max(0, Math.min(100, Math.round(pct * 100) / 100)));
   }, [formData.cost, formData.retailCost]);
 
-  useEffect(() => {
-    if (!open) {
-      dispatch(resetAddProductPanel());
-      setIngredientInput("");
-      setDebouncedIngredient("");
-      setPickedIngredients([]);
-      setIngredientError("");
-    }
-  }, [open, dispatch]);
-
-  useEffect(() => {
-    if (!open) return;
+  // Show the persisted brand only while it still exists in the loaded options (handles a stale brand id gracefully).
+  const effectiveBrand = useMemo(() => {
+    if (!formData.brand) return "";
+    if (addPanel.brands.status !== "succeeded") return formData.brand;
     const ids = new Set(addPanel.brands.items.map((o) => o.value));
-    if (formData.brand && !ids.has(formData.brand)) {
-      setFormData((prev) => ({ ...prev, brand: "" }));
-    }
-  }, [open, addPanel.brands.items, formData.brand]);
+    return ids.has(formData.brand) ? formData.brand : "";
+  }, [formData.brand, addPanel.brands.items, addPanel.brands.status]);
 
+  // Reset Redux dropdown caches when the panel unmounts so the next open starts fresh.
+  useEffect(() => {
+    return () => {
+      dispatch(resetAddProductPanel());
+    };
+  }, [dispatch]);
+
+  // 400ms debounce on the typeahead input so we don't flood the search endpoint.
   useEffect(() => {
     const t = setTimeout(() => setDebouncedIngredient(ingredientInput), 400);
     return () => clearTimeout(t);
   }, [ingredientInput]);
 
+  // Fire (or clear) the ingredient search whenever the debounced term changes.
   useEffect(() => {
-    if (!open) return;
     const q = debouncedIngredient.trim();
     if (!q) {
       dispatch(clearAddProductIngredientSearch());
       return;
     }
     void dispatch(searchAddProductIngredients({ term: q, page: 1, size: 20 }));
-  }, [debouncedIngredient, open, dispatch]);
+  }, [debouncedIngredient, dispatch]);
 
+  // Reload the category bundle whenever the user changes the top-level category.
   useEffect(() => {
-    if (!open) return;
     const cat = formData.category.trim();
     if (!cat) return;
     void dispatch(fetchAddProductCategoryBundle(cat));
-  }, [open, formData.category, dispatch]);
+  }, [formData.category, dispatch]);
 
+  // Drill into the subcategory bundle once the user picks one.
   useEffect(() => {
-    if (!open) return;
     const sc = formData.subcategory.trim();
     if (!sc) return;
     void dispatch(fetchAddProductSubCategoryBundle(sc));
-  }, [open, formData.subcategory, dispatch]);
+  }, [formData.subcategory, dispatch]);
 
   const updateField = useCallback(
     <K extends keyof AddProductFormValues>(
@@ -151,17 +146,8 @@ export default function AddProductPanel({
     [],
   );
 
-  const resetAndClose = () => {
-    console.log("[AddProductPanel] reset and close");
-    setIngredientError("");
-    setFormData({ ...ADD_PRODUCT_INITIAL_VALUES });
-    setError("");
-    setIngredientInput("");
-    setDebouncedIngredient("");
-    setPickedIngredients([]);
-    dispatch(resetAddProductPanel());
-    onClose();
-  };
+  // Parent owns the mount lifecycle — local state is dropped on unmount.
+  const resetAndClose = onClose;
 
   const bundle = formData.category
     ? addPanel.categoryBundles[formData.category]
@@ -179,16 +165,15 @@ export default function AddProductPanel({
     (bundle?.status === "loading" ||
       (Boolean(subKey) && subBundle?.status === "loading"));
 
+  /** Validates the form + ingredient list, builds the API payload, then submits. Surfaces backend errors inline. */
   const handleSubmit = async () => {
     const formErr = getAddProductFormValidationError(formData);
     if (formErr) {
-      console.log("[AddProductPanel] form validation failed", formErr);
       setError(formErr);
       return;
     }
     const ingErr = getAddProductIngredientSelectionError(pickedIngredients);
     if (ingErr) {
-      console.log("[AddProductPanel] ingredient validation failed", ingErr);
       setIngredientError(ingErr);
       setError("");
       return;
@@ -214,20 +199,18 @@ export default function AddProductPanel({
         },
         profile as Record<string, unknown> | null,
       );
-      console.log("[AddProductPanel] submit", { name: payload.name });
-      const result = await productService.addProduct(payload);
+      await productService.addProduct(payload);
       notifyApiSuccessToast({ message: "Product created" });
       onCreated?.();
       resetAndClose();
-      return result;
     } catch (e) {
-      console.log("[AddProductPanel] submit failed", e);
       setError(getErrorMessage(e, "Failed to create product. Try again."));
     } finally {
       setSubmitting(false);
     }
   };
 
+  /** Adds an ingredient from the typeahead search to the recipe (dedupes by id). */
   const addPickedIngredient = (row: {
     id: string;
     jf_display_name?: string;
@@ -235,7 +218,6 @@ export default function AddProductPanel({
     const id = String(row.id || "").trim();
     if (!id) return;
     if (pickedIngredients.some((x) => x.id === id)) return;
-    console.log("[AddProductPanel] add ingredient", id);
     setPickedIngredients((prev) => [
       ...prev,
       { id, jf_display_name: row.jf_display_name, weight: "0", unit: "oz" },
@@ -245,6 +227,7 @@ export default function AddProductPanel({
     dispatch(clearAddProductIngredientSearch());
   };
 
+  /** Adds a user-defined ingredient when the search yields no matches; flagged with the `custom:` prefix so the payload builder excludes it. */
   const addCustomIngredient = (term: string) => {
     const value = term.trim();
     if (!value) return;
@@ -275,6 +258,7 @@ export default function AddProductPanel({
     setPickedIngredients((prev) => prev.filter((x) => x.id !== id));
   };
 
+  /** Paginates the ingredient typeahead — appends the next page when the user clicks "Load more". */
   const loadMoreIngredients = () => {
     const term = debouncedIngredient.trim();
     if (!term) return;
@@ -287,11 +271,9 @@ export default function AddProductPanel({
   };
 
   return (
-    <>
-      {open ? (
-        <div className="fixed inset-0 z-50 flex">
-          <div className="flex-1 bg-black/40" onClick={resetAndClose} />
-          <div className="w-full max-w-2xl bg-white shadow-2xl flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 flex">
+      <div className="flex-1 bg-black/40" onClick={resetAndClose} />
+      <div className="w-full max-w-2xl bg-white shadow-2xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between p-6 border-b border-slate-200">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-blue-100 rounded-lg">
@@ -483,7 +465,7 @@ export default function AddProductPanel({
                 <div className="min-w-0">
                   <label className={lbl}>Brand</label>
                   <ChevronSelect
-                    value={formData.brand}
+                    value={effectiveBrand}
                     onChange={(e) => {
                       const brandId = e.target.value;
                       const companyId = brandId
@@ -987,7 +969,5 @@ export default function AddProductPanel({
             </div>
           </div>
         </div>
-      ) : null}
-    </>
   );
 }

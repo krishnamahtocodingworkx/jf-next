@@ -1,5 +1,6 @@
 "use client";
 
+// Generic success state card shown after register / forgot-password flows; renders an icon, message, and CTA link.
 import Link from "next/link";
 import { FaReact } from "react-icons/fa";
 
