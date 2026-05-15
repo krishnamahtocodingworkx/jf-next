@@ -1,5 +1,6 @@
 "use client";
 
+// Grid-view card for a single ingredient on the catalog page; renders the scores, price, and trend chip.
 import { DollarSign, Leaf, Package, Star, TrendingDown, TrendingUp, Zap } from "lucide-react";
 import type { IIngredientCatalogRow } from "@/interfaces/ingredient";
 

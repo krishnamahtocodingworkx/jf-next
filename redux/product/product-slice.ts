@@ -1,8 +1,13 @@
+// Product slice — owns catalog state, detail cache, and the lazy-loaded Add Product dropdown options.
 import { createSlice, createSelector, PayloadAction } from "@reduxjs/toolkit";
-import type { IProduct, IProductCatalogRow } from "@/interfaces/product";
-import type { SelectOption } from "@/utils/model";
-import type { ISupplierIngredient, IIngredientPagination } from "@/interfaces/ingredient";
-import { apiProductToCatalogRow } from "@/utils/commonFunctions";
+import type { IProductCatalogRow } from "@/interfaces/product";
+import type { CatalogFilterA, CatalogFilterB, ProductState } from "@/utils/model";
+import {
+    apiProductToCatalogRow,
+    createInitialAddPanelState,
+    createInitialProductState,
+    matchesCatalogCategoryPill,
+} from "@/utils/product-helpers";
 import {
     fetchProductCatalog,
     fetchProductDetail,
@@ -17,160 +22,32 @@ import {
     searchAddProductIngredients,
 } from "@/redux/product/product-thunks";
 
-export type CatalogFilterA = "all" | "active" | "concept" | "discontinued";
-export type CatalogFilterB = "all" | "bars" | "beverages" | "powders" | "snacks" | "supplements";
-
-export type AddPanelListField = {
-    status: "idle" | "loading" | "succeeded" | "failed";
-    items: SelectOption[];
-};
-
-export type AddPanelCategoryBundle = {
-    status: "idle" | "loading" | "succeeded" | "failed";
-    productTypes: string[];
-    subCategories: string[];
-};
-
-export type AddPanelIngredientSearch = {
-    status: "idle" | "loading" | "succeeded" | "failed";
-    term: string;
-    page: number;
-    list: ISupplierIngredient[];
-    pagination: IIngredientPagination;
-};
-
-export type AddPanelBrandsState = {
-    status: "idle" | "loading" | "succeeded" | "failed";
-    items: SelectOption[];
-    enrichment: "idle" | "loading" | "done";
-    /** Brand id → company id from list API (for `company_id` on submit). */
-    companyByBrandId: Record<string, string>;
-};
-
-export type ProductAddPanelState = {
-    companyTypes: AddPanelListField;
-    rootCategories: AddPanelListField;
-    categoryBundles: Record<string, AddPanelCategoryBundle>;
-    subCategoryBundles: Record<string, AddPanelCategoryBundle>;
-    brands: AddPanelBrandsState;
-    manufacturers: AddPanelListField;
-    countries: AddPanelListField;
-    currencies: AddPanelListField;
-    ingredients: AddPanelIngredientSearch;
-};
-
-const emptyListField = (): AddPanelListField => ({
-    status: "idle",
-    items: [],
-});
-
-const emptyBrandsState = (): AddPanelBrandsState => ({
-    status: "idle",
-    items: [],
-    enrichment: "idle",
-    companyByBrandId: {},
-});
-
-const initialAddPanel = (): ProductAddPanelState => ({
-    companyTypes: emptyListField(),
-    rootCategories: emptyListField(),
-    categoryBundles: {},
-    subCategoryBundles: {},
-    brands: emptyBrandsState(),
-    manufacturers: emptyListField(),
-    countries: emptyListField(),
-    currencies: emptyListField(),
-    ingredients: {
-        status: "idle",
-        term: "",
-        page: 1,
-        list: [],
-        pagination: { page: 1, pages: 1, size: 20, total: 0 },
-    },
-});
-
-export type ProductState = {
-    catalog: {
-        list: Record<string, unknown>[];
-        total: number;
-        page: number;
-        totalPages: number;
-        nextHit: boolean;
-        limit: number;
-        loadStatus: "idle" | "loading" | "succeeded" | "failed";
-        search: string;
-        filterA: CatalogFilterA;
-        filterB: CatalogFilterB;
-        displayMode: "grid" | "list";
-    };
-    detail: {
-        id: string | null;
-        data: IProduct | undefined;
-        status: "idle" | "loading" | "succeeded" | "failed";
-    };
-    addPanel: ProductAddPanelState;
-};
-
-const initialState: ProductState = {
-    catalog: {
-        list: [],
-        total: 0,
-        page: 1,
-        totalPages: 1,
-        nextHit: false,
-        limit: 10,
-        loadStatus: "idle",
-        search: "",
-        filterA: "all",
-        filterB: "all",
-        displayMode: "grid",
-    },
-    detail: {
-        id: null,
-        data: undefined,
-        status: "idle",
-    },
-    addPanel: initialAddPanel(),
-};
-
-function filterBMatches(name: string, filterB: CatalogFilterB): boolean {
-    if (filterB === "all") return true;
-    const n = (name || "").toLowerCase();
-    switch (filterB) {
-        case "bars":
-            return /bar/i.test(n);
-        case "beverages":
-            return /drink|water|latte|beverage|smoothie|juice|electrolyte/i.test(n);
-        case "powders":
-            return /powder|collagen|adaptogenic|mushroom/i.test(n) && !/protein\s*crunch/i.test(n);
-        case "snacks":
-            return /bite|gumm|cereal|protein\s*crunch/i.test(n);
-        case "supplements":
-            return /collagen|prebiotic|fiber\s*gumm/i.test(n);
-        default:
-            return true;
-    }
-}
+const initialState: ProductState = createInitialProductState();
 
 const productSlice = createSlice({
     name: "product",
     initialState,
     reducers: {
+        /** Applies the debounced catalog search; resets to page 1 so the new query starts fresh. */
         setCatalogSearchApplied: (state, action: PayloadAction<string>) => {
             state.catalog.search = action.payload;
             state.catalog.page = 1;
         },
+        /** Sets the status pill (active / concept / discontinued / all) — server-side filter. */
         setCatalogFilterA: (state, action: PayloadAction<CatalogFilterA>) => {
             state.catalog.filterA = action.payload;
             state.catalog.page = 1;
         },
+        /** Sets the category pill (bars / beverages / …) — applied client-side by the catalog selector. */
         setCatalogFilterB: (state, action: PayloadAction<CatalogFilterB>) => {
             state.catalog.filterB = action.payload;
             state.catalog.page = 1;
         },
+        /** Jumps to a specific page (1-indexed, clamped to ≥1); the `useEffect` watcher refetches. */
         setCatalogPage: (state, action: PayloadAction<number>) => {
             state.catalog.page = Math.max(1, action.payload);
         },
+        /** Sets the per-page count and resets to page 1; only allows approved sizes to guard against bad query params. */
         setCatalogLimit: (state, action: PayloadAction<number>) => {
             const allowed = [10, 20, 50, 100] as const;
             const next = allowed.includes(action.payload as (typeof allowed)[number])
@@ -179,16 +56,19 @@ const productSlice = createSlice({
             state.catalog.limit = next;
             state.catalog.page = 1;
         },
+        /** Toggles the catalog between grid and list views. */
         setCatalogDisplayMode: (state, action: PayloadAction<"grid" | "list">) => {
             state.catalog.displayMode = action.payload;
         },
+        /** Wipes the detail cache when leaving the `[id]` page so reopening fetches fresh data. */
         clearProductDetail: (state) => {
             state.detail = { id: null, data: undefined, status: "idle" };
         },
+        /** Resets every Add Product dropdown back to idle — invoked on panel unmount. */
         resetAddProductPanel: (state) => {
-            state.addPanel = initialAddPanel();
-            console.log("[product] addPanel reset");
+            state.addPanel = createInitialAddPanelState();
         },
+        /** Clears the ingredient typeahead when the user clears the search input. */
         clearAddProductIngredientSearch: (state) => {
             state.addPanel.ingredients = {
                 status: "idle",
@@ -198,6 +78,7 @@ const productSlice = createSlice({
                 pagination: { page: 1, pages: 1, size: 20, total: 0 },
             };
         },
+        /** Drops the cached brand list (forces a refetch the next time the brand select opens). */
         clearAddProductBrandOptions: (state) => {
             state.addPanel.brands.items = [];
             state.addPanel.brands.status = "idle";
@@ -207,6 +88,7 @@ const productSlice = createSlice({
     },
     extraReducers: (builder) => {
         builder
+            // ── fetchProductCatalog: drives the catalog list — pending shimmers, fulfilled replaces list + pagination.
             .addCase(fetchProductCatalog.pending, (state) => {
                 state.catalog.loadStatus = "loading";
             })
@@ -222,6 +104,7 @@ const productSlice = createSlice({
             .addCase(fetchProductCatalog.rejected, (state) => {
                 state.catalog.loadStatus = "failed";
             })
+            // ── fetchProductDetail: powers the `[id]` page — thunk rejects "NOT_FOUND" so the page can show a 404 card.
             .addCase(fetchProductDetail.pending, (state, action) => {
                 state.detail.status = "loading";
                 state.detail.id = action.meta.arg;
@@ -235,6 +118,7 @@ const productSlice = createSlice({
                 state.detail.status = "failed";
                 state.detail.data = undefined;
             })
+            // ── fetchAddProductCompanyTypes: lazy-loaded on first focus of the Add Product company select.
             .addCase(fetchAddProductCompanyTypes.pending, (state) => {
                 state.addPanel.companyTypes.status = "loading";
             })
@@ -245,6 +129,7 @@ const productSlice = createSlice({
             .addCase(fetchAddProductCompanyTypes.rejected, (state) => {
                 state.addPanel.companyTypes.status = "failed";
             })
+            // ── fetchAddProductRootCategories: lazy-loaded on first focus of the category select.
             .addCase(fetchAddProductRootCategories.pending, (state) => {
                 state.addPanel.rootCategories.status = "loading";
             })
@@ -255,6 +140,7 @@ const productSlice = createSlice({
             .addCase(fetchAddProductRootCategories.rejected, (state) => {
                 state.addPanel.rootCategories.status = "failed";
             })
+            // ── fetchAddProductCategoryBundle: keyed by category name — keeps prior options visible while reloading.
             .addCase(fetchAddProductCategoryBundle.pending, (state, action) => {
                 const cat = action.meta.arg;
                 const prev = state.addPanel.categoryBundles[cat] ?? {
@@ -283,6 +169,7 @@ const productSlice = createSlice({
                     subCategories: [],
                 };
             })
+            // ── fetchAddProductSubCategoryBundle: keyed by subcategory — used when the user picks a subcategory first.
             .addCase(fetchAddProductSubCategoryBundle.pending, (state, action) => {
                 const sub = String(action.meta.arg || "").trim();
                 const prev = state.addPanel.subCategoryBundles[sub] ?? {
@@ -311,6 +198,7 @@ const productSlice = createSlice({
                     subCategories: [],
                 };
             })
+            // ── fetchAddProductBrands: also hydrates the brand→company map so picking a brand auto-fills the company.
             .addCase(fetchAddProductBrands.pending, (state) => {
                 state.addPanel.brands.status = "loading";
                 state.addPanel.brands.enrichment = "loading";
@@ -329,6 +217,7 @@ const productSlice = createSlice({
                 state.addPanel.brands.status = "failed";
                 state.addPanel.brands.enrichment = "done";
             })
+            // ── fetchAddProductManufacturersLazy: lazy-loaded on first focus of the manufacturer select.
             .addCase(fetchAddProductManufacturersLazy.pending, (state) => {
                 state.addPanel.manufacturers.status = "loading";
             })
@@ -339,6 +228,7 @@ const productSlice = createSlice({
             .addCase(fetchAddProductManufacturersLazy.rejected, (state) => {
                 state.addPanel.manufacturers.status = "failed";
             })
+            // ── fetchAddProductCountriesLazy: lazy-loaded on first focus of the country select.
             .addCase(fetchAddProductCountriesLazy.pending, (state) => {
                 state.addPanel.countries.status = "loading";
             })
@@ -349,6 +239,7 @@ const productSlice = createSlice({
             .addCase(fetchAddProductCountriesLazy.rejected, (state) => {
                 state.addPanel.countries.status = "failed";
             })
+            // ── fetchAddProductCurrenciesLazy: lazy-loaded on first focus of the currency select.
             .addCase(fetchAddProductCurrenciesLazy.pending, (state) => {
                 state.addPanel.currencies.status = "loading";
             })
@@ -359,6 +250,7 @@ const productSlice = createSlice({
             .addCase(fetchAddProductCurrenciesLazy.rejected, (state) => {
                 state.addPanel.currencies.status = "failed";
             })
+            // ── searchAddProductIngredients: typeahead for the ingredient picker — page 1 replaces, page >1 appends.
             .addCase(searchAddProductIngredients.pending, (state) => {
                 state.addPanel.ingredients.status = "loading";
             })
@@ -399,6 +291,7 @@ type ProductRoot = { product: ProductState };
 
 const selectProductState = (s: ProductRoot) => s.product;
 
+/** Maps the wire catalog list into card rows + applies the local filter pills (status + category keywords). */
 export const selectCatalogDisplayRows = createSelector([selectProductState], (p): IProductCatalogRow[] => {
     const c = p.catalog;
     let rows = c.list.map((row, i) => apiProductToCatalogRow(row, i));
@@ -407,10 +300,12 @@ export const selectCatalogDisplayRows = createSelector([selectProductState], (p)
     } else if (c.filterA === "concept") {
         rows = rows.filter((r) => !r.product_status);
     } else if (c.filterA === "discontinued") {
+        // No discontinued products in the current data model — keep the option for future use.
         rows = rows.filter(() => false);
     }
-    rows = rows.filter((r) => filterBMatches(r.name || "", c.filterB));
+    rows = rows.filter((r) => matchesCatalogCategoryPill(r.name || "", c.filterB));
     return rows;
 });
 
+/** Server-reported total (used for the header counter + pagination math). */
 export const selectCatalogFilteredTotal = createSelector([selectProductState], (p) => p.catalog.total);

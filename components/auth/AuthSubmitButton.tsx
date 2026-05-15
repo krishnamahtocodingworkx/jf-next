@@ -1,5 +1,6 @@
 "use client";
 
+// Primary submit button for every auth form — wraps the shared `LoadingButton` with the teal auth styling.
 import { LoadingButton } from "@/components/common/LoadingButton";
 
 type AuthSubmitButtonProps = {

@@ -1,6 +1,8 @@
+// Auth thunks — wrap `userService` calls in createAsyncThunk so the slice can react to pending/fulfilled/rejected.
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { userService } from "@/services/user-service";
 import { storage } from "@/lib/storage";
+import { fireBaseLogEvent } from "@/lib/firebase";
 import { extractApiErrorMessage } from "@/utils/commonFunctions";
 import { notifyApiSuccessToast } from "@/utils/showToast";
 import {
@@ -10,100 +12,65 @@ import {
   notifyResetPasswordApiError,
 } from "@/utils/showErrorToast";
 import { interceptorHandledNetworkOrTimeout } from "@/utils/service";
-import { fireBaseLogEvent } from "@/lib/firebase";
 
-// export const loginUser = createAsyncThunk(
-//   "user/loginUser",
-//   async (payload: { email: string; password: string }, { rejectWithValue }) => {
-//     try {
-//       console.log("[auth] loginUser thunk", payload.email);
-//       const response = await userService.login(payload);
+type LoginPayload = { email: string; password: string };
 
-//       storage.setItem("access_token", response.accessToken || "");
-//       storage.setItem("refresh_token", response.refreshToken || "");
-//       storage.setItem("idToken", response.idToken || "");
+type RegisterPayload = {
+  firstName: string;
+  lastName: string;
+  company: string;
+  companyType: string;
+  phoneNumber: string;
+  jobTitle: string;
+  city: string;
+  state: string;
+  country: string;
+  email: string;
+  password: string;
+  role: string;
+  confirmPassword: string;
+};
 
-//       notifyApiSuccessToast(response);
-//       return response;
-//     } catch (error) {
-//       if (!interceptorHandledNetworkOrTimeout(error)) {
-//         notifyLoginApiError(error);
-//       }
-//       const message = extractApiErrorMessage(error) ?? "";
-//       return rejectWithValue(message);
-//     }
-//   },
-// );
+type ResetPasswordPayload = { code: string; password: string };
+
+/** Full login flow: Firebase sign-in → backend `/users/login` → persist tokens → analytics. */
 export const manualLogin = createAsyncThunk(
   "auth/manualLogin",
-  async (
-    { email, password }: { email: string; password: string },
-    { rejectWithValue }
-  ) => {
+  async ({ email, password }: LoginPayload, { rejectWithValue }) => {
     try {
       const firebaseRes = await userService.loginWithFirebase(email, password);
-
-      //  MFA CASE
+      // Short-circuit when MFA is required; UI uses `resolver` to drive the OTP step.
       if (firebaseRes.mfaRequired) {
         return {
           mfaRequired: true,
           resolver: firebaseRes.resolver,
-          phoneNumber: firebaseRes.phoneNumber
+          phoneNumber: firebaseRes.phoneNumber,
         };
       }
 
-      // Step 2: Backend login
       const apiRes = await userService.login(email, password);
-      console.log("login response in thunk:", apiRes);
-
-      //  store tokens
+      // Persist tokens so the axios interceptor can attach them on every request after a reload.
       storage.setItem("access_token", apiRes.accessToken);
       storage.setItem("refresh_token", apiRes.refreshToken);
       storage.setItem("idToken", apiRes.idToken);
 
-      // 📊 analytics
-      fireBaseLogEvent("login", {
-        method: "email_password",
-        email
-      });
+      fireBaseLogEvent("login", { method: "email_password", email });
 
-      return {
-        ...apiRes,
-        mfaRequired: false
-      };
-
-    } catch (error: any) { 
-      console.log("manualLogin error thunk:", error);
-
-      return rejectWithValue(
-        error?.message || "Login failed"
-      );
+      return { ...apiRes, mfaRequired: false };
+    } catch (error) {
+      if (!interceptorHandledNetworkOrTimeout(error)) {
+        notifyLoginApiError(error);
+      }
+      return rejectWithValue(extractApiErrorMessage(error) ?? "Login failed");
     }
-  }
+  },
 );
 
+/** Register a new user; success message comes from the backend envelope. */
 export const registerUser = createAsyncThunk(
   "user/registerUser",
-  async (
-    payload: {
-      firstName: string;
-      lastName: string;
-      company: string;
-      companyType: string;
-      phoneNumber: string;
-      jobTitle: string;
-      city: string;
-      state: string;
-      country: string;
-      email: string;
-      password: string;
-      role: string;
-      confirmPassword: string;
-    },
-    { rejectWithValue },
-  ) => {
+  async (payload: RegisterPayload, { rejectWithValue }) => {
     try {
-      console.log("[auth] registerUser thunk", payload.email);
       const response = await userService.register(payload);
       notifyApiSuccessToast(response);
       return response;
@@ -111,42 +78,39 @@ export const registerUser = createAsyncThunk(
       if (!interceptorHandledNetworkOrTimeout(error)) {
         notifyRegisterApiError(error);
       }
-      const message = extractApiErrorMessage(error) ?? "";
-      return rejectWithValue(message);
+      return rejectWithValue(extractApiErrorMessage(error) ?? "");
     }
   },
 );
 
+/** Sends the password reset email — the user clicks a link that returns them to `/auth/recovery-password`. */
 export const forgotPassword = createAsyncThunk(
   "user/forgotPassword",
   async (email: string, { rejectWithValue }) => {
     try {
-      console.log("[auth] forgotPassword thunk", email);
       await userService.forgotPassword(email);
       return true;
     } catch (error) {
       if (!interceptorHandledNetworkOrTimeout(error)) {
         notifyForgotPasswordApiError(error);
       }
-      const message = extractApiErrorMessage(error) ?? "";
-      return rejectWithValue(message);
+      return rejectWithValue(extractApiErrorMessage(error) ?? "");
     }
   },
 );
 
+/** Completes the password reset flow with the `oobCode` from the reset email. */
 export const resetPassword = createAsyncThunk(
   "user/resetPassword",
-  async (payload: { code: string; password: string }, { rejectWithValue }) => {
+  async ({ code, password }: ResetPasswordPayload, { rejectWithValue }) => {
     try {
-      console.log("[auth] resetPassword thunk", payload.code);
-      await userService.resetPassword(payload.code, payload.password);
+      await userService.resetPassword(code, password);
       return true;
     } catch (error) {
       if (!interceptorHandledNetworkOrTimeout(error)) {
         notifyResetPasswordApiError(error);
       }
-      const message = extractApiErrorMessage(error) ?? "";
-      return rejectWithValue(message);
+      return rejectWithValue(extractApiErrorMessage(error) ?? "");
     }
   },
 );

@@ -1,5 +1,6 @@
 "use client";
 
+// Full product detail view — rendered either as a side drawer (catalog card click) or as a standalone page (`/products/[id]`).
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -24,7 +25,8 @@ import {
     DataSourceBadge,
     RegionTag,
 } from "@/components/compliance/ComplianceComponents";
-import { getComplianceStatusColor, type ProductComplianceStatus } from "@/lib/compliance-data";
+import { getComplianceStatusColor } from "@/utils/mockData";
+import type { ProductComplianceStatus } from "@/interfaces/compliance";
 import { deriveProductComplianceFromApi, readProductDataSourceFromApi } from "@/utils/productComplianceFromApi";
 import { fetchProductDetail } from "@/redux/product/product-thunks";
 import { clearProductDetail } from "@/redux/product/product-slice";

@@ -1,3 +1,4 @@
+// User-facing copy for auth screens — keep all auth strings here so localisation is a single-file change.
 export const AUTH_STRINGS = {
   logout: {
     successToast: "Logged out successfully",

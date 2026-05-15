@@ -1,12 +1,13 @@
+// Cross-module helpers: API envelope/error parsing, SelectOption normalizers, generic id/number coercion.
 import axios from "axios";
 import type { SelectOption } from "@/utils/model";
-import type { IProductCatalogRow } from "@/interfaces/product";
-import type { IIngredientCatalogRow, ISupplierIngredient } from "@/interfaces/ingredient";
 
+/** Type guard for plain objects (rejects null + arrays + primitives). */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+/** Best-effort conversion of unknown values into a displayable error/success string. */
 function coerceToMessage(value: unknown): string | undefined {
   if (typeof value === "string" && value.trim()) return value.trim();
   if (Array.isArray(value)) {
@@ -22,10 +23,11 @@ function coerceToMessage(value: unknown): string | undefined {
   return undefined;
 }
 
-/** Parses typical JSON API envelopes for human-readable message fields (success + error bodies). */
+/** Walks a JSON envelope looking for human-readable message text under any of the common keys. */
 export function parseBackendMessageBody(data: unknown): string | undefined {
   if (!isRecord(data)) return undefined;
 
+  // Direct top-level keys first — covers most success + error envelopes.
   const directKeys = ["message", "msg", "error", "detail", "description", "reason"];
   for (const key of directKeys) {
     if (key in data) {
@@ -34,6 +36,7 @@ export function parseBackendMessageBody(data: unknown): string | undefined {
     }
   }
 
+  // Field-level errors object: `{ errors: { email: "Invalid" } }` etc.
   if (isRecord(data.errors)) {
     const collected: string[] = [];
     for (const v of Object.values(data.errors)) {
@@ -43,6 +46,7 @@ export function parseBackendMessageBody(data: unknown): string | undefined {
     if (collected.length) return collected.join(", ");
   }
 
+  // Recurse into `data` for envelopes that double-wrap the payload.
   if (data.data !== undefined && data.data !== data) {
     const nested = parseBackendMessageBody(data.data);
     if (nested) return nested;
@@ -51,7 +55,7 @@ export function parseBackendMessageBody(data: unknown): string | undefined {
   return undefined;
 }
 
-/** Merges backend success text from the full JSON envelope into the inner payload (unwraps `data` + top-level `message`). */
+/** Promotes the backend's success message onto the unwrapped inner payload so callers can toast it. */
 export function attachBackendSuccessMessage<T extends Record<string, unknown>>(
   envelope: unknown,
   innerPayload: T,
@@ -64,7 +68,7 @@ export function attachBackendSuccessMessage<T extends Record<string, unknown>>(
   return { ...innerPayload, message: text };
 }
 
-/** Shape returned by `utils/service` axios response interceptor on HTTP failures. */
+/** Recognises the `{ message, status }` rejection shape produced by the axios interceptor. */
 export function isSerializedInterceptorError(
   error: unknown,
 ): error is { message: string; status: number } {
@@ -75,6 +79,7 @@ export function isSerializedInterceptorError(
   );
 }
 
+/** Resolves a user-facing error string from any error type thrown by the service layer. */
 export function extractApiErrorMessage(error: unknown): string | undefined {
   if (typeof error === "string" && error.trim()) {
     return error.trim();
@@ -99,12 +104,14 @@ export function extractApiErrorMessage(error: unknown): string | undefined {
   return undefined;
 }
 
+/** Same idea as `parseBackendMessageBody`, but typed for the happy-path payload (used by `notifyApiSuccessToast`). */
 export function extractSuccessMessage(payload: unknown): string | undefined {
   if (payload === null || payload === undefined) return undefined;
   if (typeof payload !== "object") return undefined;
   return parseBackendMessageBody(payload);
 }
 
+/** Convenience wrapper: prefer the API/error message, otherwise return the caller-provided fallback. */
 export function getErrorMessage(error: unknown, fallback: string): string {
   const extracted = extractApiErrorMessage(error);
   if (extracted) return extracted;
@@ -112,7 +119,7 @@ export function getErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
-/** Show Yup/Formik field error only after blur or after a submit attempt (per-field validation UX). */
+/** Formik UX rule — show a field error only after blur or after the user attempted a submit. */
 export function visibleFormikFieldError(
   touched: boolean | undefined,
   submitCount: number,
@@ -125,18 +132,7 @@ export function visibleFormikFieldError(
   return undefined;
 }
 
-export function normalizeCompanyTypeOptions(
-  rows: Array<{ id?: string; _id?: string; title?: string }> | undefined,
-): SelectOption[] {
-  if (!Array.isArray(rows)) return [];
-  return rows
-    .map((row) => ({
-      value: row._id || row.id || "",
-      label: row.title || "",
-    }))
-    .filter((row) => row.value && row.label);
-}
-
+/** Filters bogus rows (missing alpha2) and returns sorted `{value,label}` country options. */
 export function normalizeCountryOptions(
   rows: Array<{ _id?: string; name?: string; alpha2?: string }> | undefined,
 ): SelectOption[] {
@@ -150,35 +146,62 @@ export function normalizeCountryOptions(
     .sort((a, b) => a.label.localeCompare(b.label));
 }
 
-/** 24-char hex Mongo-style id (used by create-product / profile company refs). */
+/** Validates Mongo-style 24-char hex ids — gates fields that submit to APIs requiring an ObjectId. */
 export function isValidMongoObjectId(value: string): boolean {
   return /^[a-f\d]{24}$/i.test(String(value || "").trim());
 }
 
-function unwrapAnyDeep(payload: unknown): unknown {
+/** Safe numeric coercion that distinguishes empty/garbage from `0`. */
+export function toFiniteNumber(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const n = Number(value);
+    if (!Number.isNaN(n) && Number.isFinite(n)) return n;
+  }
+  return undefined;
+}
+
+/** Recursively peels `{ data }` / `{ result }` wrappers until reaching the actual payload. */
+export function unwrapApiEnvelope(payload: unknown): unknown {
   if (payload == null) return payload;
   if (Array.isArray(payload)) return payload;
   if (typeof payload !== "object") return payload;
   const obj = payload as Record<string, unknown>;
-  if (obj.data !== undefined) return unwrapAnyDeep(obj.data);
-  if (obj.result !== undefined) return unwrapAnyDeep(obj.result);
+  if (obj.data !== undefined) return unwrapApiEnvelope(obj.data);
+  if (obj.result !== undefined) return unwrapApiEnvelope(obj.result);
   return payload;
 }
 
-/** Normalizes typical `{ data: ... }` API envelopes into an object array for dropdowns. */
+/** Keys to search when extracting the array payload from an API list response (most common shapes first). */
+const LIST_KEY_CANDIDATES = [
+  "list",
+  "items",
+  "results",
+  "rows",
+  "data",
+  "products",
+  "productList",
+  "ingredients",
+  "companies",
+  "brands",
+  "content",
+  "records",
+] as const;
+
+/** Unwraps the envelope then finds the array payload under one of the known list keys. */
 export function unwrapApiListData(payload: unknown): Record<string, unknown>[] {
-  const p = unwrapAnyDeep(payload);
+  const p = unwrapApiEnvelope(payload);
   if (Array.isArray(p)) return p as Record<string, unknown>[];
   if (!p || typeof p !== "object") return [];
   const obj = p as Record<string, unknown>;
-  const candidates = [obj.list, obj.items, obj.results, obj.rows, obj.data, obj.companies, obj.brands];
-  for (const c of candidates) {
-    if (Array.isArray(c)) return c as Record<string, unknown>[];
+  for (const key of LIST_KEY_CANDIDATES) {
+    const candidate = obj[key];
+    if (Array.isArray(candidate)) return candidate as Record<string, unknown>[];
   }
   return [];
 }
 
-/** Rows from `GET .../companyType/company-type-list` (`data.data.data[]`). */
+/** Specialised unwrap for the deeply-nested `data.data.data[]` shape from the company-type endpoint. */
 export function unwrapCompanyTypeListRows(apiBody: unknown): Record<string, unknown>[] {
   if (apiBody == null || typeof apiBody !== "object") return [];
   const root = apiBody as Record<string, unknown>;
@@ -189,6 +212,7 @@ export function unwrapCompanyTypeListRows(apiBody: unknown): Record<string, unkn
   return unwrapApiListData(mid ?? root);
 }
 
+/** Reads a string from the first matching key; supports both flat strings and nested `{ name }` shapes. */
 function readStringField(row: Record<string, unknown>, keys: string[]): string {
   for (const key of keys) {
     const v = row[key];
@@ -201,6 +225,7 @@ function readStringField(row: Record<string, unknown>, keys: string[]): string {
   return "";
 }
 
+/** Resolves the row id from common aliases (`_id`, `id`, nested `company._id`). */
 function readIdField(row: Record<string, unknown>): string {
   const id =
     row._id ??
@@ -210,7 +235,7 @@ function readIdField(row: Record<string, unknown>): string {
   return typeof id === "string" && id.trim() ? id.trim() : "";
 }
 
-/** Maps heterogeneous list rows to `{ value, label }` for native `<select>` options. */
+/** Generic API row → `{value,label}` mapper for dropdown options (company, manufacturer, brand, etc.). */
 export function normalizeEntitySelectOptions(rows: Record<string, unknown>[]): SelectOption[] {
   return rows
     .map((row) => {
@@ -223,7 +248,7 @@ export function normalizeEntitySelectOptions(rows: Record<string, unknown>[]): S
     .filter((o) => o.value && o.label);
 }
 
-/** Merge API company options with `profile.company` / `profile.companies` . */
+/** Combines API company options with company info found on the logged-in user's profile (dedupes by id). */
 export function mergeCompanySources(
   primary: SelectOption[],
   profile: Record<string, unknown> | null | undefined,
@@ -236,6 +261,7 @@ export function mergeCompanySources(
     if (!map.has(tid)) map.set(tid, label);
   };
   primary.forEach((o) => add(o.value, o.label));
+  // Single company on the profile object.
   const co = profile?.company as
     | { id?: string; _id?: string; name?: string; companyName?: string; company_name?: string }
     | undefined;
@@ -243,6 +269,7 @@ export function mergeCompanySources(
     const coId = co.id || co._id;
     if (coId) add(String(coId), String(co.name || co.companyName || co.company_name || "Company"));
   }
+  // Multi-company profile (`profile.companies`).
   const list = profile?.companies as
     | Array<{ id?: string; _id?: string; name?: string; company_name?: string }>
     | undefined;
@@ -255,39 +282,7 @@ export function mergeCompanySources(
   return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
 }
 
-/** @deprecated Use {@link mergeCompanySources}; kept for call sites that only add profile company. */
-export function mergeCompanyFromUserProfile(
-  options: SelectOption[],
-  profile: Record<string, unknown> | null | undefined,
-): SelectOption[] {
-  return mergeCompanySources(options, profile);
-}
-
-/** Deep unwrap for list payloads (Add Product ). */
-export function unwrapListPayloadDeep(payload: unknown): Record<string, unknown>[] {
-  if (payload == null) return [];
-  if (Array.isArray(payload)) return payload as Record<string, unknown>[];
-  if (typeof payload !== "object") return [];
-  const obj = payload as Record<string, unknown>;
-  const direct = [obj.results, obj.items, obj.list, obj.rows, obj.countries, obj.currencies, obj.data];
-  for (const c of direct) {
-    if (Array.isArray(c)) return c as Record<string, unknown>[];
-  }
-  if (obj.data !== undefined) {
-    const nested = unwrapListPayloadDeep(obj.data);
-    if (nested.length) return nested;
-  }
-  for (const key of Object.keys(obj)) {
-    const val = obj[key];
-    if (val && typeof val === "object" && !Array.isArray(val)) {
-      const nested = unwrapListPayloadDeep(val);
-      if (nested.length) return nested;
-    }
-  }
-  return [];
-}
-
-/** Map brand/manufacturer row to select option (`normalizeBrandManufacturerRow`). */
+/** Maps a brand or manufacturer row (heavily aliased fields) to a single `{value,label}` option. */
 export function normalizeBrandManufacturerRowToOption(row: unknown): SelectOption | null {
   const r = row as Record<string, unknown>;
   const nestedBrand =
@@ -312,6 +307,7 @@ export function normalizeBrandManufacturerRowToOption(row: unknown): SelectOptio
   return { value, label };
 }
 
+/** Removes duplicate options by `value`, keeping the first occurrence's label. */
 export function dedupeSelectOptionsByValue(rows: SelectOption[]): SelectOption[] {
   const seen = new Set<string>();
   const out: SelectOption[] = [];
@@ -324,27 +320,7 @@ export function dedupeSelectOptionsByValue(rows: SelectOption[]): SelectOption[]
   return out;
 }
 
-/** Extract `{ value, label }` brand from a product list row. */
-export function extractBrandFromProductRow(row: Record<string, unknown>): SelectOption | null {
-  const brand = row.brand;
-  if (brand && typeof brand === "object") {
-    return normalizeBrandManufacturerRowToOption(brand);
-  }
-  const brandId = String(row.brand_id ?? row.brandId ?? "").trim();
-  const brandName = String(row.brand_name ?? row.brandName ?? "").trim();
-  if (brandId && brandName) return { value: brandId, label: brandName };
-  return null;
-}
-
-/** Brand dropdown options from first page of product list (AddProductForm). */
-export function brandsFromProductListRows(list: Record<string, unknown>[]): SelectOption[] {
-  const direct = list
-    .map((row) => extractBrandFromProductRow(row))
-    .filter(Boolean) as SelectOption[];
-  return dedupeSelectOptionsByValue(direct);
-}
-
-/** Currency rows → select options (`normalizeCurrencyOptions`). */
+/** Currency-specific mapper that produces labels like `USD - US Dollar`. */
 export function normalizeCurrencySelectOptionsFromRows(rows: Record<string, unknown>[]): SelectOption[] {
   return rows
     .map((r) => {
@@ -356,283 +332,4 @@ export function normalizeCurrencySelectOptionsFromRows(rows: Record<string, unkn
       return { value, label };
     })
     .filter(Boolean) as SelectOption[];
-}
-
-// --- Product catalog card mapping (formerly `redux/product/product-adapter.ts`) ---
-
-function catalogHashSeed(id: string, index: number): number {
-  const s = `${id}#${index}`;
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
-  return Math.abs(h);
-}
-
-function catalogReadNumber(raw: Record<string, unknown>, keys: string[]): number | undefined {
-  for (const k of keys) {
-    const v = raw[k];
-    if (typeof v === "number" && Number.isFinite(v)) return v;
-    if (typeof v === "string" && v.trim() !== "") {
-      const n = Number(v);
-      if (!Number.isNaN(n) && Number.isFinite(n)) return n;
-    }
-  }
-  return undefined;
-}
-
-function catalogReadString(raw: Record<string, unknown>, keys: string[]): string {
-  for (const k of keys) {
-    const v = raw[k];
-    if (typeof v === "string" && v.trim()) return v.trim();
-  }
-  return "";
-}
-
-function catalogCategoryLabel(raw: Record<string, unknown>): string {
-  const c = raw.category;
-  if (typeof c === "string" && c.trim()) return c.trim();
-  if (c && typeof c === "object") {
-    const o = c as Record<string, unknown>;
-    const t = catalogReadString(o, ["name", "title", "label"]);
-    if (t) return t;
-  }
-  const sub = catalogReadString(raw, ["subcategory", "sub_category", "product_subcategory", "type"]);
-  if (sub) return sub;
-  const pt = raw.product_type;
-  if (pt && typeof pt === "object") {
-    const o = pt as Record<string, unknown>;
-    const t = catalogReadString(o, ["name", "title", "label"]);
-    if (t) return t;
-  }
-  return "";
-}
-
-function catalogParseTags(raw: Record<string, unknown>): string[] {
-  const out: string[] = [];
-  const pushMany = (arr: unknown) => {
-    if (!Array.isArray(arr)) return;
-    for (const x of arr) {
-      if (typeof x === "string" && x.trim()) out.push(x.trim());
-      else if (x && typeof x === "object") {
-        const o = x as Record<string, unknown>;
-        const n = catalogReadString(o, ["name", "title", "label"]);
-        if (n) out.push(n);
-      }
-    }
-  };
-  pushMany(raw.tags);
-  pushMany(raw.labels);
-  pushMany(raw.claims);
-  pushMany(raw.certifications);
-  return Array.from(new Set(out)).slice(0, 8);
-}
-
-const CATALOG_TAG_POOL = [
-  ["Vegan", "Non-GMO"],
-  ["Gluten-Free", "Low Sugar"],
-  ["Electrolytes", "Non-GMO"],
-  ["Omega-3", "Vegan"],
-];
-
-/** Map API / overview product shape to catalog card model. */
-export function apiProductToCatalogRow(raw: Record<string, unknown>, index: number): IProductCatalogRow {
-  const id = String(raw.id ?? raw._id ?? index);
-  const h = catalogHashSeed(id, index);
-  const name = String(raw.name ?? "Product");
-  const brandName =
-    raw.brand && typeof raw.brand === "object" && (raw.brand as { name?: string }).name
-      ? String((raw.brand as { name?: string }).name)
-      : catalogReadString(raw, ["brand_name", "brandName"]) || "Brand";
-
-  const cat = catalogCategoryLabel(raw);
-  const subline = cat ? `${brandName} · ${cat}` : `${brandName}`;
-
-  const nutrition =
-    catalogReadNumber(raw, ["nutritionScore", "nutrition_score", "nutrition", "Nutrition"]) ??
-    78 + (h % 15);
-  const sustain =
-    catalogReadNumber(raw, [
-      "sustainabilityScore",
-      "sustainability_score",
-      "sustain_score",
-      "sustain",
-      "Sustainability",
-    ]) ?? 76 + (h % 16);
-  const cost =
-    catalogReadNumber(raw, ["costScore", "cost_score", "cost", "commercial_score", "Cost"]) ??
-    74 + (h % 18);
-
-  const overallFromApi = catalogReadNumber(raw, [
-    "overallScore",
-    "overall_score",
-    "portfolio_score",
-    "guava_score",
-    "average_score",
-    "score",
-  ]);
-  const overallScore =
-    overallFromApi != null
-      ? Math.min(100, Math.round(overallFromApi))
-      : Math.min(100, Math.round((nutrition + sustain + cost) / 3));
-
-  const priceNum =
-    catalogReadNumber(raw, [
-      "retail_price",
-      "price",
-      "unit_price",
-      "selling_price",
-      "markup",
-      "retailCost",
-    ]) ??
-    2.5 + (h % 80) / 10;
-
-  const trendPct =
-    catalogReadNumber(raw, [
-      "trend_pct",
-      "trendPct",
-      "change_percent",
-      "price_change_pct",
-      "delta_pct",
-    ]) ?? ((h % 25) + 5) / 10;
-  const trendStableRaw = raw.trend_stable ?? raw.trendStable;
-  const trendStable =
-    trendStableRaw === true ||
-    trendStableRaw === "true" ||
-    String(trendStableRaw).toLowerCase() === "stable" ||
-    (trendPct === 0 && catalogReadString(raw, ["trend_label"]) === "Stable");
-
-  let trendPositive = h % 3 !== 0;
-  const tp = raw.trend_positive ?? raw.trendPositive;
-  if (typeof tp === "boolean") trendPositive = tp;
-  else if (catalogReadString(raw, ["trend_direction"]) === "down") trendPositive = false;
-  else if (catalogReadString(raw, ["trend_direction"]) === "up") trendPositive = true;
-
-  const tags = catalogParseTags(raw);
-  const tagList = tags.length ? tags : CATALOG_TAG_POOL[h % CATALOG_TAG_POOL.length];
-
-  const ps = raw.product_status ?? raw.active ?? raw.retail;
-  const product_status =
-    ps === true ||
-    ps === "true" ||
-    String(ps) === "1" ||
-    String(ps).toLowerCase() === "active"
-      ? true
-      : ps === false ||
-          ps === "false" ||
-          String(ps) === "0" ||
-          String(ps).toLowerCase() === "concept" ||
-          String(ps).toLowerCase() === "inactive"
-        ? false
-        : h % 2 === 0;
-
-  const starred =
-    raw.starred === true ||
-    raw.is_guava === true ||
-    raw.featured === true ||
-    catalogReadString(raw, ["badge"]) === "star" ||
-    h % 7 === 1;
-
-  const regulatoryWarning =
-    catalogReadString(raw, [
-      "regulatory_warning",
-      "regulatoryWarning",
-      "compliance_message",
-      "warning_message",
-    ]) || undefined;
-
-  return {
-    id,
-    name,
-    brandName,
-    image_uri: typeof raw.image_uri === "string" ? raw.image_uri : undefined,
-    subline,
-    tags: tagList,
-    overallScore,
-    nutrition: Math.round(Number(nutrition)),
-    sustain: Math.round(Number(sustain)),
-    cost: Math.round(Number(cost)),
-    price: Number(priceNum),
-    trendPct: Number(trendPct),
-    trendPositive,
-    trendStable: Boolean(trendStable),
-    product_status,
-    starred: Boolean(starred),
-    regulatoryWarning,
-  };
-}
-
-// --- Ingredient catalog card mapping (formerly `redux/ingredient/ingredient-adapter.ts`) ---
-
-function ingredientHash(id: string): number {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
-  return Math.abs(h);
-}
-
-function ingredientInferForm(name: string, claim: string | undefined): string {
-  const n = `${name} ${claim ?? ""}`.toLowerCase();
-  if (/powder/.test(n)) return "Powder";
-  if (/liquid|extract|concentrate/.test(n)) return "Liquid";
-  if (/puree|paste/.test(n)) return "Puree";
-  if (/granule|granulate/.test(n)) return "Granule";
-  if (/crystal/.test(n)) return "Crystal";
-  return "Powder";
-}
-
-function ingredientInferCategory(claim: string | undefined): string {
-  const c = (claim ?? "").toLowerCase();
-  if (/beverage|drink|water|juice|tea/.test(c)) return "Beverages";
-  if (/cosmetic|skin|beauty/.test(c)) return "Cosmetic";
-  if (/household|cleaning|detergent/.test(c)) return "Household";
-  if (/supplement|vitamin|mineral/.test(c)) return "Supplement";
-  if (c) return "Food";
-  return "Food";
-}
-
-/** Map supplier ingredient to catalog card model. */
-export function ingredientToCatalogRow(row: ISupplierIngredient): IIngredientCatalogRow {
-  const h = ingredientHash(row.id || "x");
-  const name = row.jf_display_name || "Unnamed Ingredient";
-  const nutrition = Math.round(Number(row.nutrition_score ?? 70 + (h % 25)));
-  const sustain = Math.round(Number(row.sustainability_score ?? 65 + (h % 30)));
-  const cost = Math.round(Number(row.cost_score ?? 60 + (h % 35)));
-  const overall = Math.round(
-    Number(row.overall_score ?? Math.round((nutrition + sustain + cost) / 3)),
-  );
-  const certifications = Array.isArray(row.certifications)
-    ? row.certifications
-        .map((c) => {
-          if (typeof c === "string") return c.trim();
-          if (c && typeof c === "object") {
-            const o = c as Record<string, unknown>;
-            return String(o.name || o.title || o.label || "").trim();
-          }
-          return "";
-        })
-        .filter(Boolean)
-        .slice(0, 4)
-    : [];
-
-  const flagged = Boolean(row.supplier_audit_scheduled) || overall < 50;
-
-  return {
-    id: row.id,
-    name,
-    category: ingredientInferCategory(row.claim),
-    form: ingredientInferForm(name, row.claim),
-    nutritionScore: nutrition,
-    sustainabilityScore: sustain,
-    costScore: cost,
-    overallScore: overall,
-    price: Number(row.estimated_price ?? 0),
-    unit: "kg",
-    activeProducts: Number(row.active_count ?? 0),
-    conceptProducts: Number(row.concept_count ?? 0),
-    origin: row.origin_country || "Unknown",
-    starred: Boolean(row.is_starred),
-    flagged,
-    trendPct: Number(row.trend_pct ?? 0),
-    trendPositive:
-      typeof row.trend_positive === "boolean" ? row.trend_positive : h % 3 !== 0,
-    certifications,
-  };
 }

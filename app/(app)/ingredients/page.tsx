@@ -1,5 +1,6 @@
 "use client";
 
+// `/ingredients` catalog page — filters/search drive Redux pagination; the grid/list view is selectable.
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -25,10 +26,12 @@ import {
     setIngredientPageSize,
     setIngredientSearch,
     setIngredientStatusFilter,
-    type IngredientCategoryFilter,
-    type IngredientFormFilter,
-    type IngredientStatusFilter,
 } from "@/redux/ingredient/ingredient-slice";
+import type {
+    IngredientCategoryFilter,
+    IngredientFormFilter,
+    IngredientStatusFilter,
+} from "@/utils/model";
 import IngredientGridCard from "@/components/ingredients/IngredientGridCard";
 import IngredientListRow from "@/components/ingredients/IngredientListRow";
 import IngredientAlertsPanel from "@/components/ingredients/IngredientAlertsPanel";
@@ -70,11 +73,8 @@ export default function IngredientsPage() {
 
     const [localSearch, setLocalSearch] = useState(ingredient.ui.searchApplied);
     const [showFilters, setShowFilters] = useState(false);
+    // Re-fetch whenever pagination or the applied search term changes.
     useEffect(() => {
-        console.log("[IngredientsPage] fetch trigger", {
-            page: ingredient.pagination.page,
-            search: ingredient.ui.searchApplied,
-        });
         dispatch(fetchIngredientsPage());
     }, [
         dispatch,
@@ -83,6 +83,7 @@ export default function IngredientsPage() {
         ingredient.ui.searchApplied,
     ]);
 
+    // 400ms debounce — only commit the search term to Redux once typing settles.
     useEffect(() => {
         const t = setTimeout(() => {
             if (localSearch.trim() !== ingredient.ui.searchApplied) {
@@ -342,10 +343,9 @@ export default function IngredientsPage() {
                                     <IngredientGridCard
                                         key={row.id}
                                         ingredient={row}
-                                        onView={() => {
-                                            console.log("[IngredientsPage] view", row.id);
-                                            router.push(`/ingredients/${encodeURIComponent(row.id)}`);
-                                        }}
+                                        onView={() =>
+                                            router.push(`/ingredients/${encodeURIComponent(row.id)}`)
+                                        }
                                     />
                                 ))}
                             </div>
@@ -360,10 +360,9 @@ export default function IngredientsPage() {
                                     <IngredientListRow
                                         key={row.id}
                                         ingredient={row}
-                                        onView={() => {
-                                            console.log("[IngredientsPage] view", row.id);
-                                            router.push(`/ingredients/${encodeURIComponent(row.id)}`);
-                                        }}
+                                        onView={() =>
+                                            router.push(`/ingredients/${encodeURIComponent(row.id)}`)
+                                        }
                                     />
                                 ))}
                             </div>

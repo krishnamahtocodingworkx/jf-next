@@ -1,6 +1,13 @@
+import {
+  confirmPasswordReset,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  signInWithCustomToken,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
 import { api } from "@/services/api";
-import { ENDPOINTS } from "@/utils/endpoints";
 import { auth } from "@/lib/firebase";
+import { ENDPOINTS } from "@/utils/endpoints";
 import {
   attachBackendSuccessMessage,
   dedupeSelectOptionsByValue,
@@ -10,87 +17,46 @@ import {
   unwrapApiListData,
   unwrapCompanyTypeListRows,
 } from "@/utils/commonFunctions";
-import {
-  signInWithCustomToken,
-  signInWithEmailAndPassword,
-  sendPasswordResetEmail,
-  confirmPasswordReset,
-  sendEmailVerification,
-} from "firebase/auth";
 import { notifyApiSuccessToast } from "@/utils/showToast";
-import type { SelectOption } from "@/utils/model";
+import type {
+  FirebaseAuthError,
+  RegisterPayload,
+  SelectOption,
+} from "@/utils/model";
+import {
+  extractMfaChallengeFromError,
+  isMfaChallenge,
+  resolveFirebaseAuthMessage,
+} from "@/utils/auth-helpers";
 
-type RegisterPayload = {
-  firstName: string;
-  lastName: string;
-  company: string;
-  companyType: string;
-  phoneNumber: string;
-  jobTitle: string;
-  city: string;
-  state: string;
-  country: string;
-  email: string;
-  password: string;
-  role: string;
-};
-
-class UserService {
-  //  Step 1: Firebase login (check MFA)
+/** All auth + user-directory API calls used by Auth, Ingredients (companies), and Products (Add panel). */
+export const userService = {
+  /** Step 1 of login — Firebase sign-in; surfaces MFA challenge data when required. */
   async loginWithFirebase(email: string, password: string) {
     try {
       const res = await signInWithEmailAndPassword(auth, email, password);
-
-      return {
-        user: res.user,
-        mfaRequired: false
-      };
-    } catch (error: any) {
-      console.log("loginWithFirebase error:", error);
-
-      switch (error.code) {
-        case "auth/user-not-found":
-          throw new Error("User does not exist. Please register first.");
-
-        case "auth/wrong-password":
-          throw new Error("Incorrect password");
-
-        case "auth/invalid-email":
-          throw new Error("Invalid email address");
-
-        case "auth/too-many-requests":
-          throw new Error("Too many attempts. Try again later.");
-
-        case "auth/multi-factor-auth-required":
-          return {
-            mfaRequired: true,
-            resolver: error.resolver,
-            phoneNumber:
-              error?.customData?._tokenResponse?.mfaInfo?.[0]?.phoneInfo
-          };
-
-        default:
-          throw new Error(error?.message || "Something went wrong");
+      return { user: res.user, mfaRequired: false as const };
+    } catch (error) {
+      const err = error as FirebaseAuthError;
+      // MFA path: caller can hand `resolver` to the OTP screen.
+      if (isMfaChallenge(err)) {
+        return { mfaRequired: true as const, ...extractMfaChallengeFromError(err) };
       }
+      throw new Error(resolveFirebaseAuthMessage(err));
     }
-  }
+  },
 
-  //  Step 2: Backend login + Firebase custom token
+  /** Step 2 of login — backend issues a custom token, we exchange it for a Firebase idToken used by API auth. */
   async login(email: string, password: string) {
-    const { data } = await api.post(ENDPOINTS.AUTH.LOGIN, {
-      email,
-      password
-    });
+    const { data } = await api.post(ENDPOINTS.AUTH.LOGIN, { email, password });
     const accessToken = data.data?.accessToken;
     const res = await signInWithCustomToken(auth, accessToken);
     const idToken = await res.user?.getIdToken();
     notifyApiSuccessToast(data);
-    return {
-      ...data.data,
-      idToken
-    };
-  }
+    return { ...data.data, idToken };
+  },
 
+  /** Creates the account, fires a verification email, then signs the user back out (login is gated on verification). */
   async register(payload: RegisterPayload) {
     const { data } = await api.post(ENDPOINTS.AUTH.REGISTER, payload);
 
@@ -98,84 +64,70 @@ class UserService {
     await sendEmailVerification(userCredential.user);
     await auth.signOut();
 
-    console.log("[auth] register API + email verification sent", payload.email);
-
     const inner = data?.data ?? data;
-
     return attachBackendSuccessMessage(data, inner);
-  }
+  },
 
-  async getCountries() {
+  /** Triggers Firebase's password-reset email; the link returns to `/auth/recovery-password?oobCode=…`. */
+  async forgotPassword(email: string): Promise<true> {
+    await sendPasswordResetEmail(auth, email);
+    return true;
+  },
+
+  /** Completes the reset flow with the `oobCode` from the email link. */
+  async resetPassword(code: string, password: string): Promise<true> {
+    await confirmPasswordReset(auth, code, password);
+    return true;
+  },
+
+  /** Country directory for Register / Add Product / Ingredient panels; returns `{id, name}` for legacy callers. */
+  async getCountries(): Promise<Array<{ id: string; name: string }>> {
     try {
       const { data } = await api.get(ENDPOINTS.COUNTRY.GET_ALL);
       const rows = data?.data?.data ?? data?.data ?? data ?? [];
-      const normalized = normalizeCountryOptions(rows).map((option) => ({
+      return normalizeCountryOptions(rows).map((option) => ({
         id: option.value,
         name: option.label,
       }));
-
-      console.log("[auth] countries fetched", normalized.length);
-
-      return normalized;
-    } catch (error) {
-      console.log("[auth] countries fetch failed", error);
+    } catch {
       return [];
     }
-  }
+  },
 
-  async forgotPassword(email: string) {
-    await sendPasswordResetEmail(auth, email);
-    console.log("[auth] firebase forgot password email sent", email);
-    return true;
-  }
-
-  async resetPassword(code: string, password: string) {
-    await confirmPasswordReset(auth, code, password);
-    console.log("[auth] firebase password reset success", code);
-    return true;
-  }
-
-  /** Company types for Add Product (`GET /api/v1/companyType/company-type-list`). */
+  /** Company-type options used by both Register and the Add Product company select. */
   async getCompanyTypeList(): Promise<SelectOption[]> {
     try {
       const { data } = await api.get(ENDPOINTS.PROFILE.COMPANY_TYPE);
       const rows = unwrapCompanyTypeListRows(data);
-      const opts = normalizeEntitySelectOptions(rows);
-      console.log("[userService] getCompanyTypeList", opts.length);
-      return opts;
-    } catch (error) {
-      console.log("[userService] getCompanyTypeList failed", error);
+      return normalizeEntitySelectOptions(rows);
+    } catch {
       return [];
     }
-  }
+  },
 
+  /** Company directory for the Ingredient "add" form. */
   async getCompanies(): Promise<SelectOption[]> {
     try {
       const { data } = await api.get(ENDPOINTS.COMPANY.LIST_FOR_SELECT);
       const rows = unwrapApiListData(data?.data ?? data);
-      const opts = normalizeEntitySelectOptions(rows);
-      console.log("[userService] getCompanies", opts.length);
-      return opts;
-    } catch (error) {
-      console.log("[userService] getCompanies failed", error);
+      return normalizeEntitySelectOptions(rows);
+    } catch {
       return [];
     }
-  }
+  },
 
+  /** Manufacturer directory used by the Add Product manufacturer select. */
   async getManufacturers(): Promise<SelectOption[]> {
     try {
       const { data } = await api.get(ENDPOINTS.PRODUCTS.MANUFACTURERS);
       const rows = unwrapApiListData(data?.data ?? data);
-      const opts = normalizeEntitySelectOptions(rows);
-      console.log("[userService] getManufacturers", opts.length);
-      return opts;
-    } catch (error) {
-      console.log("[userService] getManufacturers failed", error);
+      return normalizeEntitySelectOptions(rows);
+    } catch {
       return [];
     }
-  }
+  },
 
-  /** All product brands for Add Product (`GET /api/v1/productBrand/get-product-brand`). */
+  /** Brands for Add Product; also returns a brand→company map so picking a brand auto-fills the company field. */
   async getProductBrandList(): Promise<{
     items: SelectOption[];
     companyByBrandId: Record<string, string>;
@@ -183,32 +135,31 @@ class UserService {
     try {
       const { data } = await api.get(ENDPOINTS.PRODUCT_BRAND.LIST);
       const rows = unwrapApiListData(data?.data ?? data);
-      const companyByBrandId: Record<string, string> = {};
+
       const items: SelectOption[] = [];
+      const companyByBrandId: Record<string, string> = {};
       for (const row of rows) {
         if (!row || typeof row !== "object") continue;
-        const r = row as Record<string, unknown>;
-        const id = String(r._id ?? r.id ?? "").trim();
-        if (!id) continue;
-        const opt = normalizeBrandManufacturerRowToOption(r);
-        if (!opt) continue;
-        const comp = String(r.company ?? "").trim();
-        if (comp) companyByBrandId[id] = comp;
-        items.push(opt);
+        const record = row as Record<string, unknown>;
+        const brandId = String(record._id ?? record.id ?? "").trim();
+        if (!brandId) continue;
+        const option = normalizeBrandManufacturerRowToOption(record);
+        if (!option) continue;
+        const companyId = String(record.company ?? "").trim();
+        if (companyId) companyByBrandId[brandId] = companyId;
+        items.push(option);
       }
+
+      // Dedupe by brand id, then prune the company map to surviving entries only.
       const deduped = dedupeSelectOptionsByValue(items);
-      const map: Record<string, string> = {};
-      for (const o of deduped) {
-        const c = companyByBrandId[o.value];
-        if (c) map[o.value] = c;
+      const filteredMap: Record<string, string> = {};
+      for (const option of deduped) {
+        const companyId = companyByBrandId[option.value];
+        if (companyId) filteredMap[option.value] = companyId;
       }
-      console.log("[userService] getProductBrandList", deduped.length);
-      return { items: deduped, companyByBrandId: map };
-    } catch (error) {
-      console.log("[userService] getProductBrandList failed", error);
+      return { items: deduped, companyByBrandId: filteredMap };
+    } catch {
       return { items: [], companyByBrandId: {} };
     }
-  }
-}
-
-export const userService = new UserService();
+  },
+};

@@ -1,95 +1,17 @@
-// ─── Compliance Types ─────────────────────────────────────────────────────────
-
-import { COMPLIANCE_REGION_DISPLAY } from "@/utils/enum"
-
-export type ComplianceStatus = "compliant" | "review-needed" | "blocked" | "pending"
-export type RuleSeverity = "critical" | "warning" | "info"
-export type RegulatorySource = "FDA" | "EFSA" | "EU" | "USDA" | "FSANZ" | "Health Canada" | "UK FSA" | "Codex"
-
-export interface Region {
-  code: string
-  name: string
-  flag: string
-  countries: Country[]
-}
-
-export interface Country {
-  code: string
-  name: string
-  flag: string
-  regionCode: string
-}
-
-export interface RegulatoryRule {
-  id: string
-  name: string
-  source: RegulatorySource
-  description: string
-  regions: string[] // Region codes where this rule applies
-  severity: RuleSeverity
-  category: "ingredient" | "labeling" | "claims" | "limits" | "allergen"
-  nutrientLimits?: {
-    nutrient: string
-    maxValue: number
-    unit: string
-  }[]
-  ingredientRestrictions?: {
-    ingredientId: string
-    ingredientName: string
-    maxPercentage?: number
-    banned?: boolean
-  }[]
-  aiFix?: string // AI-suggested fix for this rule
-  documentUrl?: string
-}
-
-export interface ComplianceIssue {
-  id: string
-  ruleId: string
-  ruleName: string
-  source: RegulatorySource
-  severity: RuleSeverity
-  status: ComplianceStatus
-  region: string
-  description: string
-  affectedItem: string // Ingredient name or product name
-  currentValue?: string
-  allowedValue?: string
-  aiFix?: string
-  detectedAt: string
-}
-
-export interface ProductComplianceStatus {
-  productId: string
-  overallStatus: ComplianceStatus
-  regions: string[] // Active regions for this product
-  issues: ComplianceIssue[]
-  lastChecked: string
-}
-
-export interface IngredientComplianceStatus {
-  ingredientId: string
-  overallStatus: ComplianceStatus
-  regionStatuses: {
-    regionCode: string
-    status: ComplianceStatus
-    issues: ComplianceIssue[]
-  }[]
-  lastChecked: string
-}
-
-export interface RegulatoryGuardrails {
-  enabled: boolean
-  autoBlock: boolean // Automatically block products that fail critical rules
-  severityThreshold: RuleSeverity // Minimum severity to flag
-  enabledRuleSets: string[] // Which rule sets are active
-  notifyOnViolation: boolean
-}
-
-export interface MarketSelection {
-  regions: string[] // Selected region codes
-  countries: string[] // Selected country codes (overrides regional selection)
-}
+// Mock compliance data used by the Overview + Product detail pages.
+// All types live in `@/utils/model` and interfaces in `@/interfaces/compliance`; this file owns data + lookups only.
+import { COMPLIANCE_REGION_DISPLAY } from "@/utils/enum";
+import type { ComplianceStatus, RuleSeverity } from "@/utils/model";
+import type {
+  ComplianceIssue,
+  Country,
+  IngredientComplianceStatus,
+  MarketSelection,
+  ProductComplianceStatus,
+  RegulatoryGuardrails,
+  RegulatoryRule,
+  Region,
+} from "@/interfaces/compliance";
 
 export const regulatoryRules: RegulatoryRule[] = [
   {
