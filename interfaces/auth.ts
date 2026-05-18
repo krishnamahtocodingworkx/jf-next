@@ -1,5 +1,7 @@
-export type AuthState = "signed_out" | "signed_in";
+// Domain interfaces for the Auth module — pair with type aliases in `utils/model.ts`.
+import type { AuthState } from "@/utils/model";
 
+/** Profile data returned by the backend on login; consumed by Add Product / Ingredient panels for company defaults. */
 export interface AuthUser {
   _id: string;
   email: string;
@@ -30,6 +32,7 @@ export interface AuthUser {
   };
 }
 
+/** Persisted user slice — tokens + profile + transient loading/error flags. */
 export interface UserState {
   isLoggedIn: boolean;
   authState: AuthState;

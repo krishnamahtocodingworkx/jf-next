@@ -1,11 +1,12 @@
 "use client";
 
+// `/products/[id]` detail page — loads the product into Redux, then merges with any catalog list match before rendering the drawer.
 import { useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { fetchProductDetail } from "@/redux/product/product-thunks";
 import { clearProductDetail } from "@/redux/product/product-slice";
-import { apiProductToCatalogRow } from "@/utils/commonFunctions";
+import { apiProductToCatalogRow } from "@/utils/product-helpers";
 import ProductDetailDrawer from "@/components/products/ProductDetailDrawer";
 import DetailPageShimmer from "@/components/common/DetailPageShimmer";
 
@@ -22,9 +23,9 @@ export default function ProductDetailPage() {
         }),
     );
 
+    // Clear stale detail data on mount/unmount + when the id changes; then kick off the fetch.
     useEffect(() => {
         if (!id) return;
-        console.log("[ProductDetailPage] load", id);
         dispatch(clearProductDetail());
         void dispatch(fetchProductDetail(id));
         return () => {
@@ -32,6 +33,7 @@ export default function ProductDetailPage() {
         };
     }, [dispatch, id]);
 
+    // Merge the detail payload over the catalog list entry (detail wins) so the drawer has the richest data set.
     const catalogRow = useMemo(() => {
         if (detail.status !== "succeeded" || !detail.data) return null;
         const fromDetail = detail.data as Record<string, unknown>;

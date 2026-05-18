@@ -1,5 +1,6 @@
 "use client";
 
+// `/auth/recovery-password` — the landing page for the password reset email; reads `oobCode` and submits the new password.
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Formik } from "formik";
@@ -36,7 +37,6 @@ export default function RecoveryPasswordPage() {
           }
           try {
             await dispatch(resetPassword({ code, password: values.password })).unwrap();
-            console.log("[auth] Password reset success", code);
             router.push(routes.LOGIN);
           } catch {
             /* Toasts shown in resetPassword thunk */

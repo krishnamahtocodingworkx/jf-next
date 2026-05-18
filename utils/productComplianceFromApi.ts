@@ -1,11 +1,13 @@
 import type { DataSource } from "@/components/compliance/ComplianceComponents";
 import type {
     ComplianceIssue,
-    ComplianceStatus,
     ProductComplianceStatus,
+} from "@/interfaces/compliance";
+import type {
+    ComplianceStatus,
     RegulatorySource,
     RuleSeverity,
-} from "@/lib/compliance-data";
+} from "@/utils/model";
 
 const DATA_SOURCES: readonly DataSource[] = ["sap", "oracle", "netsuite", "excel", "csv", "manual", "api"];
 

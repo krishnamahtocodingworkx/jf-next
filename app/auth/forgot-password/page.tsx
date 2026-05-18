@@ -1,5 +1,6 @@
 "use client";
 
+// `/auth/forgot-password` — submits the email, then `forgotPassword` thunk fires the Firebase reset email.
 import Link from "next/link";
 import { Formik } from "formik";
 import { AuthInput } from "@/components/auth/AuthInput";
@@ -28,7 +29,6 @@ export default function ForgotPasswordPage() {
         onSubmit={async (values) => {
           try {
             await dispatch(forgotPassword(values.email)).unwrap();
-            console.log("[auth] Forgot password requested", values.email);
           } catch {
             /* Toasts shown in forgotPassword thunk */
           }

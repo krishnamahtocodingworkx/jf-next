@@ -1,4 +1,6 @@
-/** Minimal product shape for search + listing . */
+// Wire + UI models for the Products module.
+
+/** API-side product shape used by detail + catalog (kept loose; the index signature handles unknown fields). */
 export interface IProduct {
     id: string;
     name?: string;
@@ -22,6 +24,7 @@ export interface IProduct {
     [key: string]: unknown;
 }
 
+/** Generic pagination meta. */
 export interface IPaginationMeta {
     page: number;
     pages: number;
@@ -29,12 +32,13 @@ export interface IPaginationMeta {
     total: number;
 }
 
+/** Generic `{ list, pagination }` envelope. */
 export interface IPaginated<T> {
     list: T[];
     pagination: IPaginationMeta;
 }
 
-/** Normalised row used by the catalog cards in the UI. */
+/** UI-side row consumed by the catalog cards and detail drawer (produced by `apiProductToCatalogRow`). */
 export interface IProductCatalogRow {
     id: string;
     name: string;

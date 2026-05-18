@@ -1,13 +1,18 @@
+// Auth / UI / role constants used across the app.
+
+/** Auth-form rules referenced by both Yup schemas and copy. */
 export const AUTH_CONSTANTS = {
   ROLE_COMPANY_ADMIN: "company_admin",
   PASSWORD_MIN_LENGTH: 8,
 } as const;
 
+/** Tailwind max-width classes reused across auth cards. */
 export const UI_LIMITS = {
   AUTH_CARD_MAX_WIDTH: "max-w-md",
   AUTH_WIDE_CARD_MAX_WIDTH: "max-w-2xl",
 } as const;
 
+/** Backend-recognised role strings — backend stores the human label, not a code. */
 export enum USER_ROLES {
   JF_ADMIN = "Journey food Admin",
   JF_STAFF = "Journey foods staff",

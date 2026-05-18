@@ -1,11 +1,12 @@
 "use client";
 
+// `/ingredients/[id]` detail page — loads a single ingredient into Redux, then hands it to `IngredientDetailDrawer`.
 import { useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { fetchIngredientDetail } from "@/redux/ingredient/ingredients-thunks";
 import { clearIngredientDetail } from "@/redux/ingredient/ingredient-slice";
-import { ingredientToCatalogRow } from "@/utils/commonFunctions";
+import { ingredientToCatalogRow } from "@/utils/ingredient-helpers";
 import IngredientDetailDrawer from "@/components/ingredients/IngredientDetailDrawer";
 import DetailPageShimmer from "@/components/common/DetailPageShimmer";
 
@@ -16,9 +17,9 @@ export default function IngredientDetailPage() {
     const id = String(params?.id ?? "").trim();
     const detail = useAppSelector((s) => s.ingredient.detail);
 
+    // Clear stale detail data on mount/unmount + when the id changes; then kick off the fetch.
     useEffect(() => {
         if (!id) return;
-        console.log("[IngredientDetailPage] load", id);
         dispatch(clearIngredientDetail());
         void dispatch(fetchIngredientDetail(id));
         return () => {

@@ -1,3 +1,4 @@
+// Centralised internal route table — guards/pages reference these constants instead of literal paths.
 export const routes = {
   AUTH: "/auth",
   LOGIN: "/auth/login",

@@ -1,5 +1,6 @@
 "use client";
 
+// List-view row for a single product on the catalog page; compact alternate layout to the grid card.
 import { Package } from "lucide-react";
 import ScoreRing from "@/components/products/ScoreRing";
 import type { IProductCatalogRow } from "@/interfaces/product";

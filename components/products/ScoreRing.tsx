@@ -1,10 +1,13 @@
 "use client";
 
+// Circular progress indicator used to render a 0–100 score; color shifts green → blue → amber → red as the value drops.
+
 type ScoreRingProps = {
     value: number;
     size?: number;
 };
 
+/** Maps a score to its band color (matches the legend used across cards/detail). */
 function getColor(value: number): string {
     if (value >= 85) return "#10B981";
     if (value >= 70) return "#3B82F6";

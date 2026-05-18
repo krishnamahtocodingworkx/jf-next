@@ -1,3 +1,4 @@
+// Root layout — wraps every page with global fonts, metadata, and the Redux/persist/toast providers.
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";

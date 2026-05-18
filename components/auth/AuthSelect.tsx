@@ -1,5 +1,6 @@
 "use client";
 
+// Styled dropdown used by the Register form (country, company type, etc.); custom chevron + inline error.
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import type { SelectOption } from "@/utils/model";

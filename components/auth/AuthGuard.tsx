@@ -1,5 +1,6 @@
 "use client";
 
+// Route guard for `(app)/*` — redirects unauthenticated users back to `/auth/login` and renders a placeholder while checking.
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAppSelector } from "@/redux/hooks";
@@ -9,17 +10,16 @@ type AuthGuardProps = {
   children: React.ReactNode;
 };
 
+/** Wrap authenticated route subtrees with this to enforce a logged-in Redux state. */
 export default function AuthGuard({ children }: AuthGuardProps) {
   const router = useRouter();
   const isLoggedIn = useAppSelector((state) => state.user.isLoggedIn);
 
+  // Redirect after render so the router is ready; the early return below hides protected UI in the meantime.
   useEffect(() => {
     if (!isLoggedIn) {
-      console.log("[AuthGuard] blocked unauthenticated route access");
       router.replace(routes.LOGIN);
-      return;
     }
-    console.log("[AuthGuard] authenticated route access allowed");
   }, [isLoggedIn, router]);
 
   if (!isLoggedIn) {

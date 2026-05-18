@@ -17,7 +17,7 @@ import {
 } from "lucide-react"
 import { DeveloperPortalModal, DeveloperPortalCard } from "./DeveloperPortalModal"
 import { ComplianceStatusBar, RegulatorySummaryModal } from "./ComplianceComponents"
-import { getAllComplianceIssues, productComplianceData } from "@/lib/compliance-data"
+import { getAllComplianceIssues, productComplianceData } from "@/utils/mockData"
 import { useSelector } from "react-redux"
 import { RootState } from "@/redux/store"
 import { useRouter } from "next/navigation"

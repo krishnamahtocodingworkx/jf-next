@@ -1,5 +1,6 @@
 "use client";
 
+// `/auth/login` — Formik form that dispatches `manualLogin`; redirects to Overview on success.
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Formik } from "formik";
@@ -7,12 +8,11 @@ import { AuthInput } from "@/components/auth/AuthInput";
 import { AuthSubmitButton } from "@/components/auth/AuthSubmitButton";
 import { routes } from "@/utils/routes";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
-// import { loginUser } from "@/redux/user/user-thunks";
+import { manualLogin } from "@/redux/user/user-thunks";
 import { LOGIN_INITIAL_VALUES } from "@/utils/initialValues";
 import { AUTH_STRINGS } from "@/utils/strings";
 import { visibleFormikFieldError } from "@/utils/commonFunctions";
 import { loginSchema } from "@/utils/validationSchema";
-import { manualLogin } from "@/redux/user/user-thunks";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -28,10 +28,12 @@ export default function LoginPage() {
         validationSchema={loginSchema}
         validateOnMount={false}
         onSubmit={async (values) => {
-          await dispatch(manualLogin(values)).unwrap().then((res) => {
-            console.log("response login :", res);
+          try {
+            await dispatch(manualLogin(values)).unwrap();
             router.push(routes.OVERVIEW);
-          })
+          } catch {
+            /* Toast shown in manualLogin thunk */
+          }
         }}
       >
         {(formik) => (

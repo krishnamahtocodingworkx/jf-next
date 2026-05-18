@@ -1,3 +1,4 @@
+// Authenticated app layout — gates the entire `(app)` route group behind `AuthGuard` and renders the top nav.
 import Navbar from "@/components/navbar"
 import NavigationTabs from "@/components/navbar/NavigationTabs"
 import AuthGuard from "@/components/auth/AuthGuard"

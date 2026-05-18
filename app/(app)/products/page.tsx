@@ -1,5 +1,6 @@
 "use client";
 
+// `/products` catalog page — filters/search/pagination + the Add Product side panel.
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -25,9 +26,8 @@ import {
     setCatalogLimit,
     setCatalogPage,
     setCatalogSearchApplied,
-    type CatalogFilterA,
-    type CatalogFilterB,
 } from "@/redux/product/product-slice";
+import type { CatalogFilterA, CatalogFilterB } from "@/utils/model";
 import ProductGridCard from "@/components/products/ProductGridCard";
 import ProductListRow from "@/components/products/ProductListRow";
 import AddProductPanel from "@/components/products/AddProductPanel";
@@ -61,15 +61,12 @@ export default function ProductsPage() {
     const [showFilters, setShowFilters] = useState(false);
     const [showAddPanel, setShowAddPanel] = useState(false);
 
+    // Re-fetch whenever pagination, status filter, or applied search changes (category filter is client-side).
     useEffect(() => {
-        console.log("[ProductsPage] fetch trigger", {
-            page: catalog.page,
-            filterA: catalog.filterA,
-            search: catalog.search,
-        });
         dispatch(fetchProductCatalog());
     }, [dispatch, catalog.page, catalog.limit, catalog.filterA, catalog.search]);
 
+    // 400ms debounce — only commit the search term to Redux once typing settles.
     useEffect(() => {
         const t = setTimeout(() => {
             if (localSearch.trim() !== catalog.search) {
@@ -330,10 +327,9 @@ export default function ProductsPage() {
                                 <ProductGridCard
                                     key={p.id}
                                     product={p}
-                                    onView={() => {
-                                        console.log("[ProductsPage] view", p.id);
-                                        router.push(`/products/${encodeURIComponent(p.id)}`);
-                                    }}
+                                    onView={() =>
+                                        router.push(`/products/${encodeURIComponent(p.id)}`)
+                                    }
                                 />
                             ))}
                         </div>
@@ -345,10 +341,9 @@ export default function ProductsPage() {
                                 <ProductListRow
                                     key={p.id}
                                     product={p}
-                                    onView={() => {
-                                        console.log("[ProductsPage] view", p.id);
-                                        router.push(`/products/${encodeURIComponent(p.id)}`);
-                                    }}
+                                    onView={() =>
+                                        router.push(`/products/${encodeURIComponent(p.id)}`)
+                                    }
                                 />
                             ))}
                         </div>
@@ -405,14 +400,12 @@ export default function ProductsPage() {
                 )}
             </div>
 
-            <AddProductPanel
-                open={showAddPanel}
-                onClose={() => setShowAddPanel(false)}
-                onCreated={() => {
-                    console.log("[ProductsPage] product created, refetching");
-                    dispatch(fetchProductCatalog());
-                }}
-            />
+            {showAddPanel && (
+                <AddProductPanel
+                    onClose={() => setShowAddPanel(false)}
+                    onCreated={() => dispatch(fetchProductCatalog())}
+                />
+            )}
         </div>
     );
 }

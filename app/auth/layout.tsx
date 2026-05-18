@@ -1,3 +1,4 @@
+// Auth route layout — gates the entire `/auth/*` tree behind `PublicGuard` (logged-in users get redirected away).
 import PublicGuard from "@/components/auth/PublicGuard";
 
 export default function AuthLayout({

@@ -1,3 +1,4 @@
+// Custom Redux middleware: redux-logger + the serializable-check whitelist for redux-persist actions.
 import type { ConfigureStoreOptions } from "@reduxjs/toolkit";
 import { logger } from "redux-logger";
 import {
@@ -13,7 +14,7 @@ type GetDefaultMiddleware = Parameters<
   NonNullable<NonNullable<ConfigureStoreOptions["middleware"]>>
 >[0];
 
-/** Actions redux-persist emits that must bypass serializable checks. */
+/** redux-persist dispatches non-serializable actions; whitelist them to avoid noisy dev warnings. */
 export const PERSIST_SERIALIZE_IGNORED_ACTIONS = [
   FLUSH,
   REHYDRATE,
@@ -23,6 +24,7 @@ export const PERSIST_SERIALIZE_IGNORED_ACTIONS = [
   REGISTER,
 ] as const;
 
+/** Adds the action logger + the persist-action whitelist to the default RTK middleware stack. */
 export function createAppMiddleware(getDefaultMiddleware: GetDefaultMiddleware) {
   return getDefaultMiddleware({
     serializableCheck: {

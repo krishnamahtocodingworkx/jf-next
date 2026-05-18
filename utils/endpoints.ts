@@ -1,5 +1,9 @@
+// Centralised API route table — every service reads URLs from here so we never hardcode paths in callers.
+
+/** Base path prefix every backend route is mounted under. */
 const API = "/api/v1";
 
+/** Single source of truth for backend URLs; functions in here build dynamic paths (e.g. `PRODUCTS.REMOVE(id)`). */
 export const ENDPOINTS = {
   BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || "",
   AUTH: {

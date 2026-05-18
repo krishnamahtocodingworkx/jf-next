@@ -1,9 +1,11 @@
+// Product thunks — drive catalog fetching, detail loads, and the lazy Add Product dropdown loads.
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import type { SelectOption } from "@/utils/model";
 import { productService } from "@/services/product-service";
 import { userService } from "@/services/user-service";
 import { ingredientService } from "@/services/ingredient-service";
 
+/** Narrow shape of `state` this thunk reads from `getState` — keeps the slice/thunks loosely coupled. */
 type ProductCatalogSlice = {
     catalog: {
         page: number;
@@ -13,47 +15,42 @@ type ProductCatalogSlice = {
     };
 };
 
+/** Re-fetches the catalog page; reads current filters/pagination directly from Redux state. */
 export const fetchProductCatalog = createAsyncThunk(
     "product/fetchCatalog",
     async (_, { getState, rejectWithValue }) => {
-        const state = getState() as { product: ProductCatalogSlice };
-        const { catalog } = state.product;
+        const { catalog } = (getState() as { product: ProductCatalogSlice }).product;
+        // Map the UI status pill to the boolean param the backend expects.
+        const productStatus =
+            catalog.filterA === "active"
+                ? true
+                : catalog.filterA === "concept"
+                  ? false
+                  : undefined;
         try {
-            const productStatus =
-                catalog.filterA === "active"
-                    ? true
-                    : catalog.filterA === "concept"
-                      ? false
-                      : undefined;
-            const res = await productService.getProductsPage({
+            return await productService.getProductsPage({
                 page: catalog.page,
                 limit: catalog.limit,
                 search: catalog.search.trim() || undefined,
                 productStatus,
             });
-            console.log("[product] catalog fetched", res.page, "items", res.list.length, "total", res.total);
-            return res;
-        } catch (e) {
-            console.log("[product] catalog fetch failed", e);
-            return rejectWithValue(e);
+        } catch (error) {
+            return rejectWithValue(error);
         }
     },
 );
 
+/** Loads a single product for the `[id]` detail page; rejects `NOT_FOUND` so the page can show a friendly 404. */
 export const fetchProductDetail = createAsyncThunk(
     "product/fetchDetail",
     async (id: string, { rejectWithValue }) => {
         const product = await productService.getProductById(id);
-        if (!product) {
-            console.log("[product] detail not found", id);
-            return rejectWithValue("NOT_FOUND");
-        }
-        console.log("[product] detail fetched", id, true);
+        if (!product) return rejectWithValue("NOT_FOUND");
         return { id, product };
     },
 );
 
-/** Narrow slice without importing `store` (avoids circular slice → thunks → store). */
+/** Subset of the root state read by the lazy add-panel thunks (kept local to avoid circular imports). */
 type AddPanelRefRoot = {
     product: {
         addPanel: {
@@ -74,99 +71,81 @@ type AddPanelRefRoot = {
     };
 };
 
-const selectAddPanel = (s: unknown) => (s as AddPanelRefRoot).product.addPanel;
+const selectAddPanel = (state: unknown) => (state as AddPanelRefRoot).product.addPanel;
 
-/** Company types — `GET /api/v1/companyType/company-type-list` (Add Product company select). */
+/** Shared guard: skip the thunk if a previous fetch is in flight or already succeeded. */
+const isLoadOrLoaded = (status?: string) =>
+    status === "loading" || status === "succeeded";
+
+/** Loads company-type options the first time the Add Product company select is opened. */
 export const fetchAddProductCompanyTypes = createAsyncThunk(
     "product/fetchAddProductCompanyTypes",
-    async () => {
-        const items = await userService.getCompanyTypeList();
-        console.log("[product] addPanel company types loaded", items.length);
-        return items;
-    },
+    () => userService.getCompanyTypeList(),
     {
-        condition: (_, { getState }) => {
-            const s = selectAddPanel(getState()).companyTypes;
-            if (s.status === "loading") return false;
-            if (s.status === "succeeded") return false;
-            return true;
-        },
+        condition: (_, { getState }) =>
+            !isLoadOrLoaded(selectAddPanel(getState()).companyTypes.status),
     },
 );
 
-/** Top-level categories — `GET /api/v1/productType/category-list` (no query). */
+/** Loads top-level product categories on first focus of the category select. */
 export const fetchAddProductRootCategories = createAsyncThunk(
     "product/fetchAddProductRootCategories",
     async () => {
         const names = await productService.getCategoryListRoot();
-        const items: SelectOption[] = names.map((n) => ({ value: n, label: n }));
-        console.log("[product] addPanel root categories", items.length);
-        return items;
+        return names.map<SelectOption>((name) => ({ value: name, label: name }));
     },
     {
         condition: (_, { getState }) => {
-            const s = selectAddPanel(getState()).rootCategories;
-            if (s.status === "loading") return false;
-            if (s.status === "succeeded" && s.items.length > 0) return false;
+            const state = selectAddPanel(getState()).rootCategories;
+            if (state.status === "loading") return false;
+            if (state.status === "succeeded" && state.items.length > 0) return false;
             return true;
         },
     },
 );
 
-/** Category / product type / subcategory bundle — opened from those selects (`onFocus`). */
+/** Drills into the chosen category to populate the product-type + subcategory selects. */
 export const fetchAddProductCategoryBundle = createAsyncThunk(
     "product/fetchAddProductCategoryBundle",
     async (category: string) => {
         const bundle = await productService.getCategoryListBundle(category);
-        console.log("[product] addPanel category bundle", category, bundle);
         return { category, ...bundle };
     },
     {
         condition: (category, { getState }) => {
             const key = String(category || "").trim();
             if (!key) return false;
-            const row = selectAddPanel(getState()).categoryBundles[key];
-            if (row?.status === "loading") return false;
-            if (row?.status === "succeeded") return false;
-            return true;
+            return !isLoadOrLoaded(selectAddPanel(getState()).categoryBundles[key]?.status);
         },
     },
 );
 
-/** `GET /api/v1/productType/category-list?subCategory=…` — drill-down row for subcategory. */
+/** Same as above but keyed by subcategory (used when the user picks a subcategory first). */
 export const fetchAddProductSubCategoryBundle = createAsyncThunk(
     "product/fetchAddProductSubCategoryBundle",
     async (subCategory: string) => {
         const key = String(subCategory || "").trim();
         const bundle = await productService.getCategoryListBundleBySubCategory(key);
-        console.log("[product] addPanel subCategory bundle", key, bundle);
         return { subCategory: key, ...bundle };
     },
     {
         condition: (subCategory, { getState }) => {
             const key = String(subCategory || "").trim();
             if (!key) return false;
-            const row = selectAddPanel(getState()).subCategoryBundles[key];
-            if (row?.status === "loading") return false;
-            if (row?.status === "succeeded") return false;
-            return true;
+            return !isLoadOrLoaded(selectAddPanel(getState()).subCategoryBundles[key]?.status);
         },
     },
 );
 
-/** Product brands for Add Product — `GET .../productBrand/get-product-brand`. */
+/** Loads brands + the brand→company lookup table on first focus of the brand select. */
 export const fetchAddProductBrands = createAsyncThunk(
     "product/fetchAddProductBrands",
-    async () => {
-        const { items, companyByBrandId } = await userService.getProductBrandList();
-        console.log("[product] addPanel brands loaded", items.length);
-        return { items, companyByBrandId };
-    },
+    () => userService.getProductBrandList(),
     {
         condition: (_, { getState }) => {
-            const b = selectAddPanel(getState()).brands;
-            if (b.status === "loading") return false;
-            if (b.status === "succeeded" && b.items.length > 0) return false;
+            const state = selectAddPanel(getState()).brands;
+            if (state.status === "loading") return false;
+            if (state.status === "succeeded" && state.items.length > 0) return false;
             return true;
         },
     },
@@ -174,18 +153,10 @@ export const fetchAddProductBrands = createAsyncThunk(
 
 export const fetchAddProductManufacturersLazy = createAsyncThunk(
     "product/fetchAddProductManufacturersLazy",
-    async () => {
-        const items = await userService.getManufacturers();
-        console.log("[product] addPanel manufacturers", items.length);
-        return items;
-    },
+    () => userService.getManufacturers(),
     {
-        condition: (_, { getState }) => {
-            const s = selectAddPanel(getState()).manufacturers;
-            if (s.status === "loading") return false;
-            if (s.status === "succeeded") return false;
-            return true;
-        },
+        condition: (_, { getState }) =>
+            !isLoadOrLoaded(selectAddPanel(getState()).manufacturers.status),
     },
 );
 
@@ -193,43 +164,31 @@ export const fetchAddProductCountriesLazy = createAsyncThunk(
     "product/fetchAddProductCountriesLazy",
     async () => {
         const countryRows = await userService.getCountries();
-        const items = countryRows.map((r) => ({ value: r.id, label: r.name }));
-        console.log("[product] addPanel countries", items.length);
-        return items;
+        return countryRows.map<SelectOption>((row) => ({ value: row.id, label: row.name }));
     },
     {
-        condition: (_, { getState }) => {
-            const s = selectAddPanel(getState()).countries;
-            if (s.status === "loading") return false;
-            if (s.status === "succeeded") return false;
-            return true;
-        },
+        condition: (_, { getState }) =>
+            !isLoadOrLoaded(selectAddPanel(getState()).countries.status),
     },
 );
 
 export const fetchAddProductCurrenciesLazy = createAsyncThunk(
     "product/fetchAddProductCurrenciesLazy",
-    async () => {
-        const items = await productService.getCurrencyOptions();
-        console.log("[product] addPanel currencies", items.length);
-        return items;
-    },
+    () => productService.getCurrencyOptions(),
     {
-        condition: (_, { getState }) => {
-            const s = selectAddPanel(getState()).currencies;
-            if (s.status === "loading") return false;
-            if (s.status === "succeeded") return false;
-            return true;
-        },
+        condition: (_, { getState }) =>
+            !isLoadOrLoaded(selectAddPanel(getState()).currencies.status),
     },
 );
 
+/** Typeahead search for the ingredient picker; page 1 replaces the list, page >1 appends. */
 export const searchAddProductIngredients = createAsyncThunk(
     "product/searchAddProductIngredients",
     async (arg: { term: string; page: number; size?: number }) => {
         const term = arg.term.trim();
         const page = Math.max(1, arg.page);
         const size = Math.max(1, arg.size ?? 20);
+        // Empty-term short-circuit lets the reducer reset to its initial state cleanly.
         if (!term) {
             return {
                 term: "",
@@ -238,8 +197,7 @@ export const searchAddProductIngredients = createAsyncThunk(
                 pagination: { page: 1, pages: 1, size, total: 0 },
             };
         }
-        const res = await ingredientService.searchIngredients(term, page, size);
-        console.log("[product] addPanel ingredient search", { term, page, count: res.list.length });
-        return { term, page, list: res.list, pagination: res.pagination };
+        const { list, pagination } = await ingredientService.searchIngredients(term, page, size);
+        return { term, page, list, pagination };
     },
 );

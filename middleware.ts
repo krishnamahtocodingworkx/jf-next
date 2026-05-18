@@ -1,24 +1,16 @@
+// Next.js Edge middleware stub. Auth tokens live in localStorage so route guarding happens client-side
+// in `AuthGuard` / `PublicGuard`; this file exists so we can hook in redirects, headers, or A/B flags later
+// without touching the matcher config.
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
 
-/**
- * Next.js Edge middleware (root `middleware.ts`).
- * Runs before requests complete — use for redirects, headers, locale, A/B flags, etc.
- * Auth with tokens in localStorage cannot be read here; use cookies/session if you need Edge auth.
- *
- * Industry placement: repository root next to `app/` (or `src/middleware.ts` when using a `src/` layout).
- */
-export function middleware(request: NextRequest) {
-  console.log("[middleware]", request.method, request.nextUrl.pathname);
+/** No-op pass-through — extend here when we need server-side redirects (e.g., locale, maintenance mode). */
+export function middleware() {
   return NextResponse.next();
 }
 
+/** Runs on every request except static asset / Next internals / image extensions. */
 export const config = {
   matcher: [
-    /*
-     * Run on all paths except static assets, Next internals, and metadata files.
-     * Adjust if you only need middleware on specific segments (e.g. `/app/:path*`).
-     */
     "/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

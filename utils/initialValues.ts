@@ -1,3 +1,4 @@
+// Default Formik values for every form — keep them here so resetting/re-mounting is consistent.
 import type {
   AddProductFormValues,
   ForgotPasswordFormValues,
@@ -6,20 +7,24 @@ import type {
   RegisterFormValues,
 } from "@/utils/model";
 
+/** Login form defaults. */
 export const LOGIN_INITIAL_VALUES: LoginFormValues = {
   email: "",
   password: "",
 };
 
+/** Forgot-password form defaults. */
 export const FORGOT_PASSWORD_INITIAL_VALUES: ForgotPasswordFormValues = {
   email: "",
 };
 
+/** Recovery form defaults. */
 export const RECOVERY_PASSWORD_INITIAL_VALUES: RecoveryPasswordFormValues = {
   password: "",
   confirmPassword: "",
 };
 
+/** Register form defaults. */
 export const REGISTER_INITIAL_VALUES: RegisterFormValues = {
   firstName: "",
   lastName: "",
@@ -35,6 +40,7 @@ export const REGISTER_INITIAL_VALUES: RegisterFormValues = {
   confirmPassword: "",
 };
 
+/** Add Product side-panel defaults; `unit` defaults align with the ingredient weight chooser. */
 export const ADD_PRODUCT_INITIAL_VALUES: AddProductFormValues = {
   company: "",
   category: "",

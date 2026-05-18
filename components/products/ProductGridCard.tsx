@@ -1,5 +1,6 @@
 "use client";
 
+// Grid-view card for a single product on the catalog page; shows overall score ring + per-axis scores + trend.
 import { AlertTriangle, DollarSign, Package, Star, TrendingDown, TrendingUp } from "lucide-react";
 import ScoreRing from "@/components/products/ScoreRing";
 import type { IProductCatalogRow } from "@/interfaces/product";
