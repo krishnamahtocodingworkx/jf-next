@@ -2,7 +2,7 @@
 
 // Side panel for creating a new product — lazy-loads its dropdowns, debounces the ingredient search,
 // validates the form, then POSTs through `productService.addProduct`. Parent owns mount lifecycle.
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { Package, Save, X } from "lucide-react";
 import { productService } from "@/services/product-service";
 import { buildCreateProductPayload } from "@/utils/product-helpers";
@@ -81,23 +81,29 @@ export default function AddProductPanel({ onClose, onCreated }: AddProductPanelP
   >([]);
   const [ingredientError, setIngredientError] = useState("");
 
-  // Derived profit-margin % shown next to the price fields (clamped 0–100).
-  const costMarginDisplay = useMemo(() => {
-    const c = Number(formData.cost) || 0;
-    const m = Number(formData.retailCost) || 0;
-    if (m <= 0) return "0";
+ // Display-only profit margin: ((retail − cost) / retail) × 100, clamped 0–100; "0" when retail ≤ 0.
+  const c = Number(formData.cost) || 0;
+  const m = Number(formData.retailCost) || 0;
+  let costMarginDisplay = "0";
+  if (m > 0) {
     const pct = ((m - c) / m) * 100;
-    if (!Number.isFinite(pct)) return "0";
-    return String(Math.max(0, Math.min(100, Math.round(pct * 100) / 100)));
-  }, [formData.cost, formData.retailCost]);
+    if (Number.isFinite(pct)) {
+     costMarginDisplay = String(
+      Math.max(0, Math.min(100, Math.round(pct * 100) / 100))
+    );
+  }
+}
 
-  // Show the persisted brand only while it still exists in the loaded options (handles a stale brand id gracefully).
-  const effectiveBrand = useMemo(() => {
-    if (!formData.brand) return "";
-    if (addPanel.brands.status !== "succeeded") return formData.brand;
-    const ids = new Set(addPanel.brands.items.map((o) => o.value));
-    return ids.has(formData.brand) ? formData.brand : "";
-  }, [formData.brand, addPanel.brands.items, addPanel.brands.status]);
+// Brand select value: keep formData.brand while options load; clear it if the id is missing from the list.
+  let effectiveBrand = "";
+  if (formData.brand) {
+    if (addPanel.brands.status !== "succeeded") {
+    effectiveBrand = formData.brand;
+    } else {
+      const ids = new Set(addPanel.brands.items.map((o) => o.value));
+      effectiveBrand = ids.has(formData.brand) ? formData.brand : "";
+   }
+}
 
   // Reset Redux dropdown caches when the panel unmounts so the next open starts fresh.
   useEffect(() => {
@@ -135,16 +141,14 @@ export default function AddProductPanel({ onClose, onCreated }: AddProductPanelP
     if (!sc) return;
     void dispatch(fetchAddProductSubCategoryBundle(sc));
   }, [formData.subcategory, dispatch]);
-
-  const updateField = useCallback(
-    <K extends keyof AddProductFormValues>(
-      key: K,
-      value: AddProductFormValues[K],
-    ) => {
-      setFormData((prev) => ({ ...prev, [key]: value }));
-    },
-    [],
-  );
+  
+ // Updates one `formData` field by key; value type must match `AddProductFormValues[K]`
+  function updateField<K extends keyof AddProductFormValues>(
+    key: K,
+    value: AddProductFormValues[K],
+  ) {
+    setFormData((prev) => ({ ...prev, [key]: value }));
+  }
 
   // Parent owns the mount lifecycle — local state is dropped on unmount.
   const resetAndClose = onClose;
