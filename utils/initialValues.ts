@@ -65,5 +65,5 @@ export const ADD_PRODUCT_INITIAL_VALUES: AddProductFormValues = {
   country: "",
   currency: "",
   objectives: [],
-  notes: "",
+  description: "",
 };

@@ -14,7 +14,7 @@ export interface IProduct {
     overallScore?: number;
     code?: string;
     displayPrice?: number;
-    notes?: string;
+    description?: string;
     objective?: string[];
     ingredients?: Array<{
         ingredient?: { jf_display_name?: string; id?: string };

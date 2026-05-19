@@ -35,7 +35,7 @@ import {
 import { ChevronSelect } from "@/components/common/ChevronSelect";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
- 
+
 const PRODUCT_OBJECTIVE_OPTIONS = [
   "Cost",
   "Sustainability",
@@ -61,9 +61,13 @@ const selectField = twMerge(
   ),
 );
 const selectMuted = twMerge(clsx(selectField, "bg-slate-50"));
-const chk = "h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500";
+const chk =
+  "h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500";
 
-export default function AddProductPanel({ onClose, onCreated }: AddProductPanelProps) {
+export default function AddProductPanel({
+  onClose,
+  onCreated,
+}: AddProductPanelProps) {
   const dispatch = useAppDispatch();
   const profile = useAppSelector((s) => s.user.details);
   const addPanel = useAppSelector((s) => s.product.addPanel);
@@ -79,29 +83,29 @@ export default function AddProductPanel({ onClose, onCreated }: AddProductPanelP
   >([]);
   const [ingredientError, setIngredientError] = useState("");
 
- // Display-only profit margin: ((retail − cost) / retail) × 100, clamped 0–100; "0" when retail ≤ 0.
+  // Display-only profit margin: ((retail − cost) / retail) × 100, clamped 0–100; "0" when retail ≤ 0.
   const c = Number(formData.cost) || 0;
   const m = Number(formData.retailCost) || 0;
   let costMarginDisplay = "0";
   if (m > 0) {
     const pct = ((m - c) / m) * 100;
     if (Number.isFinite(pct)) {
-     costMarginDisplay = String(
-      Math.max(0, Math.min(100, Math.round(pct * 100) / 100))
-    );
+      costMarginDisplay = String(
+        Math.max(0, Math.min(100, Math.round(pct * 100) / 100)),
+      );
+    }
   }
-}
 
-// Brand select value: keep formData.brand while options load; clear it if the id is missing from the list.
+  // Brand select value: keep formData.brand while options load; clear it if the id is missing from the list.
   let effectiveBrand = "";
   if (formData.brand) {
     if (addPanel.brands.status !== "succeeded") {
-    effectiveBrand = formData.brand;
+      effectiveBrand = formData.brand;
     } else {
       const ids = new Set(addPanel.brands.items.map((o) => o.value));
       effectiveBrand = ids.has(formData.brand) ? formData.brand : "";
-   }
-}
+    }
+  }
 
   // Reset Redux dropdown caches when the panel unmounts so the next open starts fresh.
   useEffect(() => {
@@ -149,8 +153,8 @@ export default function AddProductPanel({ onClose, onCreated }: AddProductPanelP
     if (!sc) return;
     void dispatch(fetchAddProductSubCategoryBundle(sc));
   }, [formData.subcategory, dispatch]);
-  
- // Updates one `formData` field by key; value type must match `AddProductFormValues[K]`
+
+  // Updates one `formData` field by key; value type must match `AddProductFormValues[K]`
   function updateField<K extends keyof AddProductFormValues>(
     key: K,
     value: AddProductFormValues[K],
@@ -170,7 +174,7 @@ export default function AddProductPanel({ onClose, onCreated }: AddProductPanelP
     subBundle?.status === "succeeded" && subBundle.productTypes.length > 0
       ? subBundle.productTypes
       : null;
-  const productTypeOptions = productTypesFromSub ?? (bundle?.productTypes ?? []);
+  const productTypeOptions = productTypesFromSub ?? bundle?.productTypes ?? [];
   const subCategoryOptions = bundle?.subCategories ?? [];
 
   /** Validates the form + ingredient list, builds the API payload, then submits. Surfaces backend errors inline. */
@@ -195,14 +199,21 @@ export default function AddProductPanel({ onClose, onCreated }: AddProductPanelP
         weight: Number(i.weight) || 0,
         unit: i.unit,
       }));
+      const manufacturerName =
+        addPanel.manufacturers.items.find(
+          (o) => o.value === formData.manufacturer,
+        )?.label ?? "";
       const payload = buildCreateProductPayload(
         {
           name: formData.name,
-          notes: formData.notes,
-          category: formData.category,
-          manufacturer: formData.manufacturer,
-          brand_id: formData.brand,
-          company_id: formData.company,
+          sku: formData.sku,
+          flavor: formData.flavor,
+          servingSize: formData.servingSize,
+          upcCode: formData.upcCode,
+          cost: formData.cost,
+          retailCost: formData.retailCost,
+          profitMargin: costMarginDisplay,
+          manufacturerName,
           ingredients: ingredientsPayload,
         },
         profile as Record<string, unknown> | null,
@@ -282,674 +293,647 @@ export default function AddProductPanel({ onClose, onCreated }: AddProductPanelP
     <div className="fixed inset-0 z-50 flex">
       <div className="flex-1 bg-black/40" onClick={resetAndClose} />
       <div className="w-full max-w-2xl bg-white shadow-2xl flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between p-6 border-b border-slate-200">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Package className="h-5 w-5 text-blue-600" />
-                </div>
-                <h2 className="text-lg font-semibold text-slate-800">
-                  Add Product
-                </h2>
-              </div>
-              <button
-                type="button"
-                onClick={resetAndClose}
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-              >
-                <X className="h-5 w-5 text-slate-500" />
-              </button>
+        <div className="flex items-center justify-between p-6 border-b border-slate-200">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Package className="h-5 w-5 text-blue-600" />
             </div>
+            <h2 className="text-lg font-semibold text-slate-800">
+              Add Product
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={resetAndClose}
+            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+          >
+            <X className="h-5 w-5 text-slate-500" />
+          </button>
+        </div>
 
-            <div className="flex-1 space-y-6 overflow-y-auto p-6">
-              {error && (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                  {error}
-                </div>
-              )}
+        <div className="flex-1 space-y-6 overflow-y-auto p-6">
+          {error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {error}
+            </div>
+          )}
 
-              <div>
-                <label className={lbl}>Select Company</label>
-                <ChevronSelect
-                  value={formData.company}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setFormData((prev) => ({
-                      ...prev,
-                      company: v,
-                      brand: prev.company === v ? prev.brand : "",
-                    }));
-                  }}
-                  onOpenIntent={() => {
-                    void dispatch(fetchAddProductCompanyTypes());
-                  }}
-                  className={selectField}
-                  iconClassName="right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-                >
-                  <option value="">
-                    Select company
+          <div>
+            <label className={lbl}>Select Company</label>
+            <ChevronSelect
+              value={formData.company}
+              onChange={(e) => {
+                const v = e.target.value;
+                setFormData((prev) => ({
+                  ...prev,
+                  company: v,
+                  brand: prev.company === v ? prev.brand : "",
+                }));
+              }}
+              onOpenIntent={() => {
+                void dispatch(fetchAddProductCompanyTypes());
+              }}
+              className={selectField}
+              iconClassName="right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+            >
+              <option value="">Select company</option>
+              {addPanel.companyTypes.items.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </ChevronSelect>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className={lbl}>Category</label>
+              <ChevronSelect
+                value={formData.category}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setFormData((prev) => ({
+                    ...prev,
+                    category: v,
+                    productType: "",
+                    subcategory: "",
+                  }));
+                }}
+                onOpenIntent={() => {
+                  void dispatch(fetchAddProductRootCategories());
+                }}
+                className={selectField}
+                iconClassName="right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+              >
+                <option value="">Select Category</option>
+                {addPanel.rootCategories.items.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
                   </option>
-                  {addPanel.companyTypes.items.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </ChevronSelect>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className={lbl}>Category</label>
-                  <ChevronSelect
-                    value={formData.category}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setFormData((prev) => ({
-                        ...prev,
-                        category: v,
-                        productType: "",
-                        subcategory: "",
-                      }));
-                    }}
-                    onOpenIntent={() => {
-                      void dispatch(fetchAddProductRootCategories());
-                    }}
-                    className={selectField}
-                    iconClassName="right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-                  >
-                    <option value="">
-                      Select Category
-                    </option>
-                    {addPanel.rootCategories.items.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </ChevronSelect>
-                </div>
-                <div>
-                  <label className={lbl}>Subcategory</label>
-                  <ChevronSelect
-                    value={formData.subcategory}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setFormData((prev) => ({
-                        ...prev,
-                        subcategory: v,
-                        productType: "",
-                      }));
-                    }}
-                    onOpenIntent={() => {
-                      if (formData.category) {
-                        void dispatch(
-                          fetchAddProductCategoryBundle(formData.category),
-                        );
-                      }
-                      const sc = formData.subcategory.trim();
-                      if (sc) {
-                        void dispatch(fetchAddProductSubCategoryBundle(sc));
-                      }
-                    }}
-                    disabled={
-                      !formData.category ||
-                      subCategoryOptions.length === 0
-                    }
-                    className={selectField}
-                    iconClassName="right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-                  >
-                    <option value="">
-                      {!formData.category
-                        ? "Select category first"
-                        : subCategoryOptions.length === 0
-                          ? "No subcategories"
-                          : "Select Subcategory"}
-                    </option>
-                    {subCategoryOptions.map((sc) => (
-                      <option key={sc} value={sc}>
-                        {sc}
-                      </option>
-                    ))}
-                  </ChevronSelect>
-                </div>
-                <div>
-                  <label className={lbl}>Product Type</label>
-                  <ChevronSelect
-                    value={formData.productType}
-                    onChange={(e) => updateField("productType", e.target.value)}
-                    onOpenIntent={() => {
-                      if (formData.category) {
-                        void dispatch(
-                          fetchAddProductCategoryBundle(formData.category),
-                        );
-                      }
-                    }}
-                    disabled={!formData.category}
-                    className={selectField}
-                    iconClassName="right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-                  >
-                    <option value="">
-                      {!formData.category
-                        ? "Select sub-cat. first"
-                        : "Select Product Type"}
-                    </option>
-                    {productTypeOptions.map((pt) => (
-                      <option key={pt} value={pt}>
-                        {pt}
-                      </option>
-                    ))}
-                  </ChevronSelect>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className={lbl}>SKU / Code</label>
-                  <input
-                    type="text"
-                    value={formData.sku}
-                    onChange={(e) => updateField("sku", e.target.value)}
-                    placeholder="0003003406461"
-                    className={field}
-                  />
-                </div>
-                <div>
-                  <label className={lbl}>Product Name</label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => updateField("name", e.target.value)}
-                    placeholder="Enter product name"
-                    className={field}
-                  />
-                </div>
-                <div className="min-w-0">
-                  <label className={lbl}>Brand</label>
-                  <ChevronSelect
-                    value={effectiveBrand}
-                    onChange={(e) => {
-                      const brandId = e.target.value;
-                      const companyId = brandId
-                        ? addPanel.brands.companyByBrandId[brandId] ?? ""
-                        : "";
-                      setFormData((prev) => ({
-                        ...prev,
-                        brand: brandId,
-                        company: brandId ? companyId : "",
-                      }));
-                    }}
-                    onOpenIntent={() => {
-                      void dispatch(fetchAddProductBrands());
-                    }}
-                    className={selectField}
-                    iconClassName="right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-                  >
-                    <option value="">
-                      Select Brand
-                    </option>
-                    {addPanel.brands.items.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </ChevronSelect>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className={lbl}>Flavor</label>
-                  <input
-                    type="text"
-                    value={formData.flavor}
-                    onChange={(e) => updateField("flavor", e.target.value)}
-                    className={field}
-                  />
-                </div>
-                <div>
-                  <label className={lbl}>Manufacturer</label>
-                  <ChevronSelect
-                    value={formData.manufacturer}
-                    onChange={(e) =>
-                      updateField("manufacturer", e.target.value)
-                    }
-                    onOpenIntent={() => {
-                      void dispatch(fetchAddProductManufacturersLazy());
-                    }}
-                    className={selectField}
-                    iconClassName="right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-                  >
-                    <option value="">
-                      Select manufacturer
-                    </option>
-                    {addPanel.manufacturers.items.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </ChevronSelect>
-                </div>
-                <div>
-                  <label className={lbl}>Date Created</label>
-                  <input
-                    type="date"
-                    value={formData.dateCreated}
-                    onChange={(e) => updateField("dateCreated", e.target.value)}
-                    className={field}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div className="min-w-0">
-                  <label className={lbl}>Fulfilment Date</label>
-                  <input
-                    type="date"
-                    value={formData.fulfilmentDate}
-                    onChange={(e) =>
-                      updateField("fulfilmentDate", e.target.value)
-                    }
-                    className={twMerge(clsx(field, "min-w-0"))}
-                  />
-                </div>
-                <div className="min-w-0">
-                  <label className={lbl}>Serving Size</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      value={formData.servingSize}
-                      onChange={(e) =>
-                        updateField("servingSize", e.target.value)
-                      }
-                      className={twMerge(clsx(field, "min-w-0 flex-1"))}
-                    />
-                    <ChevronSelect
-                      wrapperClassName="w-16 shrink-0 min-w-0"
-                      value={formData.servingUnit}
-                      onChange={(e) =>
-                        updateField("servingUnit", e.target.value)
-                      }
-                      className={twMerge(clsx(selectField, "pl-2 pr-8"))}
-                      iconClassName="right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-                    >
-                      {INGREDIENT_UNITS.map((u) => (
-                        <option key={u} value={u}>
-                          {u}
-                        </option>
-                      ))}
-                    </ChevronSelect>
-                  </div>
-                </div>
-                <div className="min-w-0">
-                  <label className={lbl}>Product Status</label>
-                  <ChevronSelect
-                    value={formData.status}
-                    onChange={(e) =>
-                      updateField(
-                        "status",
-                        e.target.value as AddProductFormValues["status"],
-                      )
-                    }
-                    className={selectMuted}
-                    iconClassName="right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-                  >
-                    <option value="active">Active</option>
-                    <option value="concept">Concept</option>
-                    <option value="discontinued">Discontinued</option>
-                  </ChevronSelect>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label className={lblSection}>Guava Product</label>
-                  <label className="flex cursor-pointer items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={formData.guavaEnabled}
-                      onChange={(e) =>
-                        updateField("guavaEnabled", e.target.checked)
-                      }
-                      className={chk}
-                    />
-                    <span className="text-sm text-slate-600">
-                      Enable Guava features for this product
-                    </span>
-                  </label>
-                </div>
-                <div>
-                  <label className={lblSection}>Additives</label>
-                  <label className="flex cursor-pointer items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={formData.hasAdditives}
-                      onChange={(e) =>
-                        updateField("hasAdditives", e.target.checked)
-                      }
-                      className={chk}
-                    />
-                    <span className="text-sm text-slate-600">
-                      Product contains additives
-                    </span>
-                  </label>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={lbl}>Guava Score</label>
-                  <input
-                    type="text"
-                    value={formData.guavaScore}
-                    onChange={(e) => updateField("guavaScore", e.target.value)}
-                    placeholder="Enter Guava Score"
-                    className={fieldBlue}
-                  />
-                </div>
-                <div>
-                  <label className={lbl}>UPC Code</label>
-                  <input
-                    type="text"
-                    value={formData.upcCode}
-                    onChange={(e) => updateField("upcCode", e.target.value)}
-                    placeholder="Enter UPC Code"
-                    className={fieldBlue}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className={lbl}>Cost</label>
-                  <input
-                    type="number"
-                    value={formData.cost}
-                    onChange={(e) => updateField("cost", e.target.value)}
-                    className={field}
-                  />
-                </div>
-                <div>
-                  <label className={lbl}>Retail Cost</label>
-                  <input
-                    type="number"
-                    value={formData.retailCost}
-                    onChange={(e) => updateField("retailCost", e.target.value)}
-                    className={field}
-                  />
-                </div>
-                <div>
-                  <label className={lbl}>Profit Margin (%)</label>
-                  <input
-                    type="text"
-                    readOnly
-                    value={costMarginDisplay}
-                    aria-readonly
-                    className={fieldReadonly}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={lbl}>Country</label>
-                  <ChevronSelect
-                    value={formData.country}
-                    onChange={(e) => updateField("country", e.target.value)}
-                    onOpenIntent={() => {
-                      void dispatch(fetchAddProductCountriesLazy());
-                    }}
-                    className={selectField}
-                    iconClassName="right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-                  >
-                    <option value="">
-                      Select country
-                    </option>
-                    {addPanel.countries.items.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </ChevronSelect>
-                </div>
-                <div>
-                  <label className={lbl}>Currency</label>
-                  <ChevronSelect
-                    value={formData.currency}
-                    onChange={(e) => updateField("currency", e.target.value)}
-                    onOpenIntent={() => {
-                      void dispatch(fetchAddProductCurrenciesLazy());
-                    }}
-                    className={selectField}
-                    iconClassName="right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-                  >
-                    <option value="">
-                      Select currency
-                    </option>
-                    {addPanel.currencies.items.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </ChevronSelect>
-                </div>
-              </div>
-
-              <div>
-                <label className={lbl}>Ingredients</label>
-                {pickedIngredients.length > 0 && (
-                  <div className="mb-2 rounded-lg border border-slate-200 bg-slate-50 p-2">
-                    {pickedIngredients.map((row) => {
-                      const label =
-                        row.jf_display_name ||
-                        (row.id.startsWith("custom:")
-                          ? row.id.slice("custom:".length)
-                          : row.id);
-                      return (
-                        <div
-                          key={row.id}
-                          className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 py-2 last:border-b-0"
-                        >
-                          <div className="min-w-0 flex-1 text-sm font-semibold text-slate-800">
-                            {label}
-                          </div>
-                          <div className="flex shrink-0 items-center gap-2">
-                            <input
-                              type="number"
-                              min={0}
-                              step="0.01"
-                              placeholder="Weight"
-                              value={row.weight}
-                              onChange={(e) =>
-                                updateIngredientWeight(row.id, e.target.value)
-                              }
-                              className={twMerge(clsx(field, "w-24 min-w-0"))}
-                            />
-                            <ChevronSelect
-                              wrapperClassName="w-[5.5rem] shrink-0"
-                              value={row.unit}
-                              onChange={(e) =>
-                                updateIngredientUnit(row.id, e.target.value)
-                              }
-                              className={twMerge(clsx(selectField, "pl-2 pr-8"))}
-                              iconClassName="right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-                            >
-                              {INGREDIENT_UNITS.map((u) => (
-                                <option key={u} value={u}>
-                                  {u}
-                                </option>
-                              ))}
-                            </ChevronSelect>
-                            <button
-                              type="button"
-                              className="p-1 text-slate-500 hover:text-slate-800"
-                              aria-label="Remove ingredient"
-                              onClick={() => removePickedIngredient(row.id)}
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                <div className="relative mt-2 min-w-0">
-                  <div
-                    className={twMerge(
-                      clsx(
-                        "flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2.5",
-                        "focus-within:ring-2 focus-within:ring-blue-500",
-                      ),
-                    )}
-                  >
-                    <input
-                      type="text"
-                      className="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-slate-900 outline-none focus:ring-0"
-                      placeholder="Search Ingredient to add..."
-                      value={ingredientInput}
-                      onChange={(e) => setIngredientInput(e.target.value)}
-                      autoComplete="off"
-                    />
-                    {ingredientInput.trim().length > 0 ? (
-                      <button
-                        type="button"
-                        className="shrink-0 p-0.5"
-                        aria-label="Clear search"
-                        onClick={() => {
-                          setIngredientInput("");
-                          dispatch(clearAddProductIngredientSearch());
-                        }}
-                      >
-                        <X className="h-4 w-4 cursor-pointer text-slate-400 hover:text-slate-600" />
-                      </button>
-                    ) : null}
-                  </div>
-                  {ingredientError ? (
-                    <div className="mt-1 text-sm text-red-600">
-                      {ingredientError}
-                    </div>
-                  ) : null}
-                  {addPanel.ingredients.status === "loading" && (
-                    <p className="mt-1 text-xs text-slate-500">Searching…</p>
-                  )}
-                  {addPanel.ingredients.list.length > 0 && (
-                    <ul
-                      className="absolute z-20 mt-1 max-h-48 w-full overflow-auto rounded-lg border border-slate-200 bg-white shadow-lg"
-                      role="listbox"
-                    >
-                      {addPanel.ingredients.list.map((row) => {
-                        const id = String(row.id);
-                        const taken = pickedIngredients.some(
-                          (x) => x.id === id,
-                        );
-                        return (
-                          <li key={id}>
-                            <button
-                              type="button"
-                              disabled={taken}
-                              className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50 disabled:opacity-40"
-                              onClick={() => addPickedIngredient(row)}
-                            >
-                              <div className="font-semibold text-slate-800">
-                                {row.jf_display_name || id}
-                              </div>
-                              {(() => {
-                                const m = (
-                                  row as unknown as Record<string, unknown>
-                                ).manufacturer as { name?: string } | undefined;
-                                return m?.name ? (
-                                  <div className="text-xs text-slate-500">
-                                    {m.name}
-                                  </div>
-                                ) : null;
-                              })()}
-                            </button>
-                          </li>
-                        );
-                      })}
-                      {addPanel.ingredients.pagination.pages >
-                        addPanel.ingredients.pagination.page && (
-                        <li className="border-t border-slate-200">
-                          <button
-                            type="button"
-                            className="w-full px-3 py-2 text-sm text-blue-600 hover:bg-slate-50"
-                            onClick={loadMoreIngredients}
-                          >
-                            Load more
-                          </button>
-                        </li>
-                      )}
-                    </ul>
-                  )}
-                  {addPanel.ingredients.status !== "loading" &&
-                    debouncedIngredient.trim().length > 0 &&
-                    addPanel.ingredients.list.length === 0 && (
-                      <div className="mt-2 text-sm text-slate-600">
-                        Ingredient <strong>{debouncedIngredient.trim()}</strong>{" "}
-                        does not exist.{" "}
-                        <button
-                          type="button"
-                          className="text-blue-600 underline hover:text-blue-800"
-                          onClick={() =>
-                            addCustomIngredient(debouncedIngredient)
-                          }
-                        >
-                          Create it?
-                        </button>
-                      </div>
-                    )}
-                </div>
-              </div>
-
-              <div className="min-w-0">
-                <label className={lbl}>Product Objectives</label>
-                <ChevronSelect
-                  value={formData.objectives[0] ?? ""}
-                  onChange={(e) =>
-                    updateField(
-                      "objectives",
-                      e.target.value ? [e.target.value] : [],
-                    )
-                  }
-                  className={selectField}
-                  iconClassName="right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-                >
-                  <option value="">Select Product Objectives</option>
-                  {PRODUCT_OBJECTIVE_OPTIONS.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </ChevronSelect>
-              </div>
-
-              <div>
-                <label className={lbl}>Notes</label>
-                <textarea
-                  value={formData.notes}
-                  onChange={(e) => updateField("notes", e.target.value)}
-                  placeholder="Optional notes..."
-                  className={twMerge(clsx(field, "resize-none"))}
-                  rows={4}
-                />
-              </div>
-
-              <p className="text-sm text-slate-500">
-                These preferences will help tailor our product suggestions and
-                filter your live searching whilst using the app.
-              </p>
+                ))}
+              </ChevronSelect>
             </div>
-
-            <div className="flex justify-end border-t border-slate-200 p-4">
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={submitting}
-                className="flex items-center gap-2 rounded-lg bg-emerald-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
+            <div>
+              <label className={lbl}>Subcategory</label>
+              <ChevronSelect
+                value={formData.subcategory}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setFormData((prev) => ({
+                    ...prev,
+                    subcategory: v,
+                    productType: "",
+                  }));
+                }}
+                onOpenIntent={() => {
+                  if (formData.category) {
+                    void dispatch(
+                      fetchAddProductCategoryBundle(formData.category),
+                    );
+                  }
+                  const sc = formData.subcategory.trim();
+                  if (sc) {
+                    void dispatch(fetchAddProductSubCategoryBundle(sc));
+                  }
+                }}
+                disabled={!formData.category || subCategoryOptions.length === 0}
+                className={selectField}
+                iconClassName="right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
               >
-                <Save className="h-4 w-4" />
-                {submitting ? "Saving..." : "Save Detail"}
-              </button>
+                <option value="">
+                  {!formData.category
+                    ? "Select category first"
+                    : subCategoryOptions.length === 0
+                      ? "No subcategories"
+                      : "Select Subcategory"}
+                </option>
+                {subCategoryOptions.map((sc) => (
+                  <option key={sc} value={sc}>
+                    {sc}
+                  </option>
+                ))}
+              </ChevronSelect>
+            </div>
+            <div>
+              <label className={lbl}>Product Type</label>
+              <ChevronSelect
+                value={formData.productType}
+                onChange={(e) => updateField("productType", e.target.value)}
+                onOpenIntent={() => {
+                  if (formData.category) {
+                    void dispatch(
+                      fetchAddProductCategoryBundle(formData.category),
+                    );
+                  }
+                }}
+                disabled={!formData.category}
+                className={selectField}
+                iconClassName="right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+              >
+                <option value="">
+                  {!formData.category
+                    ? "Select sub-cat. first"
+                    : "Select Product Type"}
+                </option>
+                {productTypeOptions.map((pt) => (
+                  <option key={pt} value={pt}>
+                    {pt}
+                  </option>
+                ))}
+              </ChevronSelect>
             </div>
           </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className={lbl}>SKU / Code</label>
+              <input
+                type="text"
+                value={formData.sku}
+                onChange={(e) => updateField("sku", e.target.value)}
+                placeholder="0003003406461"
+                className={field}
+              />
+            </div>
+            <div>
+              <label className={lbl}>Product Name</label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => updateField("name", e.target.value)}
+                placeholder="Enter product name"
+                className={field}
+              />
+            </div>
+            <div className="min-w-0">
+              <label className={lbl}>Brand</label>
+              <ChevronSelect
+                value={effectiveBrand}
+                onChange={(e) => {
+                  const brandId = e.target.value;
+                  const companyId = brandId
+                    ? (addPanel.brands.companyByBrandId[brandId] ?? "")
+                    : "";
+                  setFormData((prev) => ({
+                    ...prev,
+                    brand: brandId,
+                    company: brandId ? companyId : "",
+                  }));
+                }}
+                onOpenIntent={() => {
+                  void dispatch(fetchAddProductBrands());
+                }}
+                className={selectField}
+                iconClassName="right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+              >
+                <option value="">Select Brand</option>
+                {addPanel.brands.items.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </ChevronSelect>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className={lbl}>Flavor</label>
+              <input
+                type="text"
+                value={formData.flavor}
+                onChange={(e) => updateField("flavor", e.target.value)}
+                className={field}
+              />
+            </div>
+            <div>
+              <label className={lbl}>Manufacturer</label>
+              <ChevronSelect
+                value={formData.manufacturer}
+                onChange={(e) => updateField("manufacturer", e.target.value)}
+                onOpenIntent={() => {
+                  void dispatch(fetchAddProductManufacturersLazy());
+                }}
+                className={selectField}
+                iconClassName="right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+              >
+                <option value="">Select manufacturer</option>
+                {addPanel.manufacturers.items.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </ChevronSelect>
+            </div>
+            <div>
+              <label className={lbl}>Date Created</label>
+              <input
+                type="date"
+                value={formData.dateCreated}
+                onChange={(e) => updateField("dateCreated", e.target.value)}
+                className={field}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div className="min-w-0">
+              <label className={lbl}>Fulfilment Date</label>
+              <input
+                type="date"
+                value={formData.fulfilmentDate}
+                onChange={(e) => updateField("fulfilmentDate", e.target.value)}
+                className={twMerge(clsx(field, "min-w-0"))}
+              />
+            </div>
+            <div className="min-w-0">
+              <label className={lbl}>Serving Size</label>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  value={formData.servingSize}
+                  onChange={(e) => updateField("servingSize", e.target.value)}
+                  className={twMerge(clsx(field, "min-w-0 flex-1"))}
+                />
+                <ChevronSelect
+                  wrapperClassName="w-16 shrink-0 min-w-0"
+                  value={formData.servingUnit}
+                  onChange={(e) => updateField("servingUnit", e.target.value)}
+                  className={twMerge(clsx(selectField, "pl-2 pr-8"))}
+                  iconClassName="right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                >
+                  {INGREDIENT_UNITS.map((u) => (
+                    <option key={u} value={u}>
+                      {u}
+                    </option>
+                  ))}
+                </ChevronSelect>
+              </div>
+            </div>
+            <div className="min-w-0">
+              <label className={lbl}>Product Status</label>
+              <ChevronSelect
+                value={formData.status}
+                onChange={(e) =>
+                  updateField(
+                    "status",
+                    e.target.value as AddProductFormValues["status"],
+                  )
+                }
+                className={selectMuted}
+                iconClassName="right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+              >
+                <option value="active">Active</option>
+                <option value="concept">Concept</option>
+                <option value="discontinued">Discontinued</option>
+              </ChevronSelect>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className={lblSection}>Guava Product</label>
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={formData.guavaEnabled}
+                  onChange={(e) =>
+                    updateField("guavaEnabled", e.target.checked)
+                  }
+                  className={chk}
+                />
+                <span className="text-sm text-slate-600">
+                  Enable Guava features for this product
+                </span>
+              </label>
+            </div>
+            <div>
+              <label className={lblSection}>Additives</label>
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={formData.hasAdditives}
+                  onChange={(e) =>
+                    updateField("hasAdditives", e.target.checked)
+                  }
+                  className={chk}
+                />
+                <span className="text-sm text-slate-600">
+                  Product contains additives
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={lbl}>Guava Score</label>
+              <input
+                type="text"
+                value={formData.guavaScore}
+                onChange={(e) => updateField("guavaScore", e.target.value)}
+                placeholder="Enter Guava Score"
+                className={fieldBlue}
+              />
+            </div>
+            <div>
+              <label className={lbl}>UPC Code</label>
+              <input
+                type="text"
+                value={formData.upcCode}
+                onChange={(e) => updateField("upcCode", e.target.value)}
+                placeholder="Enter UPC Code"
+                className={fieldBlue}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className={lbl}>Cost</label>
+              <input
+                type="number"
+                value={formData.cost}
+                onChange={(e) => updateField("cost", e.target.value)}
+                className={field}
+              />
+            </div>
+            <div>
+              <label className={lbl}>Retail Cost</label>
+              <input
+                type="number"
+                value={formData.retailCost}
+                onChange={(e) => updateField("retailCost", e.target.value)}
+                className={field}
+              />
+            </div>
+            <div>
+              <label className={lbl}>Profit Margin (%)</label>
+              <input
+                type="text"
+                readOnly
+                value={costMarginDisplay}
+                aria-readonly
+                className={fieldReadonly}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={lbl}>Country</label>
+              <ChevronSelect
+                value={formData.country}
+                onChange={(e) => updateField("country", e.target.value)}
+                onOpenIntent={() => {
+                  void dispatch(fetchAddProductCountriesLazy());
+                }}
+                className={selectField}
+                iconClassName="right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+              >
+                <option value="">Select country</option>
+                {addPanel.countries.items.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </ChevronSelect>
+            </div>
+            <div>
+              <label className={lbl}>Currency</label>
+              <ChevronSelect
+                value={formData.currency}
+                onChange={(e) => updateField("currency", e.target.value)}
+                onOpenIntent={() => {
+                  void dispatch(fetchAddProductCurrenciesLazy());
+                }}
+                className={selectField}
+                iconClassName="right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+              >
+                <option value="">Select currency</option>
+                {addPanel.currencies.items.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </ChevronSelect>
+            </div>
+          </div>
+
+          <div>
+            <label className={lbl}>Ingredients</label>
+            {pickedIngredients.length > 0 && (
+              <div className="mb-2 rounded-lg border border-slate-200 bg-slate-50 p-2">
+                {pickedIngredients.map((row) => {
+                  const label =
+                    row.jf_display_name ||
+                    (row.id.startsWith("custom:")
+                      ? row.id.slice("custom:".length)
+                      : row.id);
+                  return (
+                    <div
+                      key={row.id}
+                      className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 py-2 last:border-b-0"
+                    >
+                      <div className="min-w-0 flex-1 text-sm font-semibold text-slate-800">
+                        {label}
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          placeholder="Weight"
+                          value={row.weight}
+                          onChange={(e) =>
+                            updateIngredientWeight(row.id, e.target.value)
+                          }
+                          className={twMerge(clsx(field, "w-24 min-w-0"))}
+                        />
+                        <ChevronSelect
+                          wrapperClassName="w-[5.5rem] shrink-0"
+                          value={row.unit}
+                          onChange={(e) =>
+                            updateIngredientUnit(row.id, e.target.value)
+                          }
+                          className={twMerge(clsx(selectField, "pl-2 pr-8"))}
+                          iconClassName="right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                        >
+                          {INGREDIENT_UNITS.map((u) => (
+                            <option key={u} value={u}>
+                              {u}
+                            </option>
+                          ))}
+                        </ChevronSelect>
+                        <button
+                          type="button"
+                          className="p-1 text-slate-500 hover:text-slate-800"
+                          aria-label="Remove ingredient"
+                          onClick={() => removePickedIngredient(row.id)}
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <div className="relative mt-2 min-w-0">
+              <div
+                className={twMerge(
+                  clsx(
+                    "flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2.5",
+                    "focus-within:ring-2 focus-within:ring-blue-500",
+                  ),
+                )}
+              >
+                <input
+                  type="text"
+                  className="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-slate-900 outline-none focus:ring-0"
+                  placeholder="Search Ingredient to add..."
+                  value={ingredientInput}
+                  onChange={(e) => setIngredientInput(e.target.value)}
+                  autoComplete="off"
+                />
+                {ingredientInput.trim().length > 0 ? (
+                  <button
+                    type="button"
+                    className="shrink-0 p-0.5"
+                    aria-label="Clear search"
+                    onClick={() => {
+                      setIngredientInput("");
+                      dispatch(clearAddProductIngredientSearch());
+                    }}
+                  >
+                    <X className="h-4 w-4 cursor-pointer text-slate-400 hover:text-slate-600" />
+                  </button>
+                ) : null}
+              </div>
+              {ingredientError ? (
+                <div className="mt-1 text-sm text-red-600">
+                  {ingredientError}
+                </div>
+              ) : null}
+              {addPanel.ingredients.status === "loading" && (
+                <p className="mt-1 text-xs text-slate-500">Searching…</p>
+              )}
+              {addPanel.ingredients.list.length > 0 && (
+                <ul
+                  className="absolute z-20 mt-1 max-h-48 w-full overflow-auto rounded-lg border border-slate-200 bg-white shadow-lg"
+                  role="listbox"
+                >
+                  {addPanel.ingredients.list.map((row) => {
+                    const id = String(row.id);
+                    const taken = pickedIngredients.some((x) => x.id === id);
+                    return (
+                      <li key={id}>
+                        <button
+                          type="button"
+                          disabled={taken}
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50 disabled:opacity-40"
+                          onClick={() => addPickedIngredient(row)}
+                        >
+                          <div className="font-semibold text-slate-800">
+                            {row.jf_display_name || id}
+                          </div>
+                          {(() => {
+                            const m = (
+                              row as unknown as Record<string, unknown>
+                            ).manufacturer as { name?: string } | undefined;
+                            return m?.name ? (
+                              <div className="text-xs text-slate-500">
+                                {m.name}
+                              </div>
+                            ) : null;
+                          })()}
+                        </button>
+                      </li>
+                    );
+                  })}
+                  {addPanel.ingredients.pagination.pages >
+                    addPanel.ingredients.pagination.page && (
+                    <li className="border-t border-slate-200">
+                      <button
+                        type="button"
+                        className="w-full px-3 py-2 text-sm text-blue-600 hover:bg-slate-50"
+                        onClick={loadMoreIngredients}
+                      >
+                        Load more
+                      </button>
+                    </li>
+                  )}
+                </ul>
+              )}
+              {addPanel.ingredients.status !== "loading" &&
+                debouncedIngredient.trim().length > 0 &&
+                addPanel.ingredients.list.length === 0 && (
+                  <div className="mt-2 text-sm text-slate-600">
+                    Ingredient <strong>{debouncedIngredient.trim()}</strong>{" "}
+                    does not exist.{" "}
+                    <button
+                      type="button"
+                      className="text-blue-600 underline hover:text-blue-800"
+                      onClick={() => addCustomIngredient(debouncedIngredient)}
+                    >
+                      Create it?
+                    </button>
+                  </div>
+                )}
+            </div>
+          </div>
+
+          <div className="min-w-0">
+            <label className={lbl}>Product Objectives</label>
+            <ChevronSelect
+              value={formData.objectives[0] ?? ""}
+              onChange={(e) =>
+                updateField(
+                  "objectives",
+                  e.target.value ? [e.target.value] : [],
+                )
+              }
+              className={selectField}
+              iconClassName="right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+            >
+              <option value="">Select Product Objectives</option>
+              {PRODUCT_OBJECTIVE_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </ChevronSelect>
+          </div>
+
+          <div>
+            <label className={lbl}>Description</label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => updateField("description", e.target.value)}
+              placeholder="Optional description..."
+              className={twMerge(clsx(field, "resize-none"))}
+              rows={4}
+            />
+          </div>
+
+          <p className="text-sm text-slate-500">
+            These preferences will help tailor our product suggestions and
+            filter your live searching whilst using the app.
+          </p>
         </div>
+
+        <div className="flex justify-end border-t border-slate-200 p-4">
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={submitting}
+            className="flex items-center gap-2 rounded-lg bg-emerald-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Save className="h-4 w-4" />
+            {submitting ? "Saving..." : "Save Detail"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
