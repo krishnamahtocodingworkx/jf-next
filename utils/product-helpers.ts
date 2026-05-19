@@ -52,7 +52,7 @@ export function buildCreateProductPayload(
         unit: String((row.unit as string | undefined) || "g"),
     }));
 
-    // `manufacturer-product-list` row `_id` → create-product `manufacturer` (string id, never null).
+    // `manufacturer-product-list` row `_id` → create-product `manufacturer` (string name, never null).
     const manufacturerRaw = String(values.manufacturer ?? "").trim();
     const brandIdRaw = values.brand_id ? String(values.brand_id).trim() : "";
     const profileCompany = profile?.company as { id?: string; _id?: string } | undefined;
@@ -61,7 +61,7 @@ export function buildCreateProductPayload(
         : String(profileCompany?.id || profileCompany?._id || "");
 
     const brandId = isValidMongoObjectId(brandIdRaw) ? brandIdRaw : "";
-    const manufacturerId = isValidMongoObjectId(manufacturerRaw) ? manufacturerRaw : "";
+    const manufacturerName = isValidMongoObjectId(manufacturerRaw) ? manufacturerRaw : "";
     const companyId = isValidMongoObjectId(companyIdRaw) ? companyIdRaw : "";
 
     const payload: Record<string, unknown> = {
@@ -75,7 +75,7 @@ export function buildCreateProductPayload(
         muteNotifications: false,
         muteAnalytics: false,
         newVersion: false,
-        manufacturer: manufacturerId,
+        manufacturer: manufacturerName,
     };
     return payload;
 }
