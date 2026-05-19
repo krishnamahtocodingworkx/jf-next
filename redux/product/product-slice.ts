@@ -202,8 +202,7 @@ const productSlice = createSlice({
             .addCase(fetchAddProductBrands.pending, (state) => {
                 state.addPanel.brands.status = "loading";
                 state.addPanel.brands.enrichment = "loading";
-                state.addPanel.brands.items = [];
-                state.addPanel.brands.companyByBrandId = {};
+                // Keep prior options visible while refetching so the dropdown does not flash empty.
             })
             .addCase(fetchAddProductBrands.fulfilled, (state, action) => {
                 state.addPanel.brands.items = action.payload.items;

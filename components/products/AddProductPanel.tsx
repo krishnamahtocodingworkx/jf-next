@@ -2,7 +2,7 @@
 
 // Side panel for creating a new product — lazy-loads its dropdowns, debounces the ingredient search,
 // validates the form, then POSTs through `productService.addProduct`. Parent owns mount lifecycle.
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { Package, Save, X } from "lucide-react";
 import { productService } from "@/services/product-service";
 import { buildCreateProductPayload } from "@/utils/product-helpers";
@@ -112,6 +112,16 @@ export default function AddProductPanel({ onClose, onCreated }: AddProductPanelP
     };
   }, [dispatch]);
 
+  // Start dropdown API calls as soon as the panel mounts so first click does not wait on the network.
+  useLayoutEffect(() => {
+    void dispatch(fetchAddProductCompanyTypes());
+    void dispatch(fetchAddProductRootCategories());
+    void dispatch(fetchAddProductBrands());
+    void dispatch(fetchAddProductManufacturersLazy());
+    void dispatch(fetchAddProductCountriesLazy());
+    void dispatch(fetchAddProductCurrenciesLazy());
+  }, [dispatch]);
+
   // 400ms debounce on the typeahead input so we don't flood the search endpoint.
   useEffect(() => {
     const t = setTimeout(() => setDebouncedIngredient(ingredientInput), 400);
@@ -164,10 +174,6 @@ export default function AddProductPanel({ onClose, onCreated }: AddProductPanelP
       : null;
   const productTypeOptions = productTypesFromSub ?? (bundle?.productTypes ?? []);
   const subCategoryOptions = bundle?.subCategories ?? [];
-  const productTypeSelectLoading =
-    Boolean(formData.category.trim()) &&
-    (bundle?.status === "loading" ||
-      (Boolean(subKey) && subBundle?.status === "loading"));
 
   /** Validates the form + ingredient list, builds the API payload, then submits. Surfaces backend errors inline. */
   const handleSubmit = async () => {
@@ -318,14 +324,11 @@ export default function AddProductPanel({ onClose, onCreated }: AddProductPanelP
                   onOpenIntent={() => {
                     void dispatch(fetchAddProductCompanyTypes());
                   }}
-                  disabled={addPanel.companyTypes.status === "loading"}
                   className={selectField}
                   iconClassName="right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
                 >
                   <option value="">
-                    {addPanel.companyTypes.status === "loading"
-                      ? "Loading companies…"
-                      : "Select company"}
+                    Select company
                   </option>
                   {addPanel.companyTypes.items.map((o) => (
                     <option key={o.value} value={o.value}>
@@ -352,48 +355,15 @@ export default function AddProductPanel({ onClose, onCreated }: AddProductPanelP
                     onOpenIntent={() => {
                       void dispatch(fetchAddProductRootCategories());
                     }}
-                    disabled={addPanel.rootCategories.status === "loading"}
                     className={selectField}
                     iconClassName="right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
                   >
                     <option value="">
-                      {addPanel.rootCategories.status === "loading"
-                        ? "Loading categories…"
-                        : "Select Category"}
+                      Select Category
                     </option>
                     {addPanel.rootCategories.items.map((o) => (
                       <option key={o.value} value={o.value}>
                         {o.label}
-                      </option>
-                    ))}
-                  </ChevronSelect>
-                </div>
-                <div>
-                  <label className={lbl}>Product Type</label>
-                  <ChevronSelect
-                    value={formData.productType}
-                    onChange={(e) => updateField("productType", e.target.value)}
-                    onOpenIntent={() => {
-                      if (formData.category) {
-                        void dispatch(
-                          fetchAddProductCategoryBundle(formData.category),
-                        );
-                      }
-                    }}
-                    disabled={!formData.category || productTypeSelectLoading}
-                    className={selectField}
-                    iconClassName="right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-                  >
-                    <option value="">
-                      {!formData.category
-                        ? "Select category first"
-                        : productTypeSelectLoading
-                          ? "Loading…"
-                          : "Select Product Type"}
-                    </option>
-                    {productTypeOptions.map((pt) => (
-                      <option key={pt} value={pt}>
-                        {pt}
                       </option>
                     ))}
                   </ChevronSelect>
@@ -423,7 +393,6 @@ export default function AddProductPanel({ onClose, onCreated }: AddProductPanelP
                     }}
                     disabled={
                       !formData.category ||
-                      bundle?.status === "loading" ||
                       subCategoryOptions.length === 0
                     }
                     className={selectField}
@@ -439,6 +408,34 @@ export default function AddProductPanel({ onClose, onCreated }: AddProductPanelP
                     {subCategoryOptions.map((sc) => (
                       <option key={sc} value={sc}>
                         {sc}
+                      </option>
+                    ))}
+                  </ChevronSelect>
+                </div>
+                <div>
+                  <label className={lbl}>Product Type</label>
+                  <ChevronSelect
+                    value={formData.productType}
+                    onChange={(e) => updateField("productType", e.target.value)}
+                    onOpenIntent={() => {
+                      if (formData.category) {
+                        void dispatch(
+                          fetchAddProductCategoryBundle(formData.category),
+                        );
+                      }
+                    }}
+                    disabled={!formData.category}
+                    className={selectField}
+                    iconClassName="right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                  >
+                    <option value="">
+                      {!formData.category
+                        ? "Select sub-cat. first"
+                        : "Select Product Type"}
+                    </option>
+                    {productTypeOptions.map((pt) => (
+                      <option key={pt} value={pt}>
+                        {pt}
                       </option>
                     ))}
                   </ChevronSelect>
@@ -484,14 +481,11 @@ export default function AddProductPanel({ onClose, onCreated }: AddProductPanelP
                     onOpenIntent={() => {
                       void dispatch(fetchAddProductBrands());
                     }}
-                    disabled={addPanel.brands.enrichment === "loading"}
                     className={selectField}
                     iconClassName="right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
                   >
                     <option value="">
-                      {addPanel.brands.enrichment === "loading"
-                        ? "Loading brands…"
-                        : "Select Brand"}
+                      Select Brand
                     </option>
                     {addPanel.brands.items.map((o) => (
                       <option key={o.value} value={o.value}>
@@ -499,11 +493,6 @@ export default function AddProductPanel({ onClose, onCreated }: AddProductPanelP
                       </option>
                     ))}
                   </ChevronSelect>
-                  {addPanel.brands.enrichment === "loading" ? (
-                    <p className="mt-1 text-xs text-slate-500">
-                      Loading brands…
-                    </p>
-                  ) : null}
                 </div>
               </div>
 
@@ -527,14 +516,11 @@ export default function AddProductPanel({ onClose, onCreated }: AddProductPanelP
                     onOpenIntent={() => {
                       void dispatch(fetchAddProductManufacturersLazy());
                     }}
-                    disabled={addPanel.manufacturers.status === "loading"}
                     className={selectField}
                     iconClassName="right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
                   >
                     <option value="">
-                      {addPanel.manufacturers.status === "loading"
-                        ? "Loading manufacturers…"
-                        : "Select manufacturer"}
+                      Select manufacturer
                     </option>
                     {addPanel.manufacturers.items.map((o) => (
                       <option key={o.value} value={o.value}>
@@ -712,14 +698,11 @@ export default function AddProductPanel({ onClose, onCreated }: AddProductPanelP
                     onOpenIntent={() => {
                       void dispatch(fetchAddProductCountriesLazy());
                     }}
-                    disabled={addPanel.countries.status === "loading"}
                     className={selectField}
                     iconClassName="right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
                   >
                     <option value="">
-                      {addPanel.countries.status === "loading"
-                        ? "Loading countries…"
-                        : "Select country"}
+                      Select country
                     </option>
                     {addPanel.countries.items.map((o) => (
                       <option key={o.value} value={o.value}>
@@ -736,14 +719,11 @@ export default function AddProductPanel({ onClose, onCreated }: AddProductPanelP
                     onOpenIntent={() => {
                       void dispatch(fetchAddProductCurrenciesLazy());
                     }}
-                    disabled={addPanel.currencies.status === "loading"}
                     className={selectField}
                     iconClassName="right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
                   >
                     <option value="">
-                      {addPanel.currencies.status === "loading"
-                        ? "Loading currencies…"
-                        : "Select currency"}
+                      Select currency
                     </option>
                     {addPanel.currencies.items.map((o) => (
                       <option key={o.value} value={o.value}>
