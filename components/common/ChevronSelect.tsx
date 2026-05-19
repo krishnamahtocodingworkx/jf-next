@@ -23,23 +23,24 @@ export function ChevronSelect({
     children,
     ...rest
 }: ChevronSelectProps) {
+    const fireOpenIntent = () => {
+        if (!disabled) onOpenIntent?.();
+    };
+
     return (
-        <div className={twMerge(clsx("relative min-w-0", wrapperClassName))}>
+        <div
+            className={twMerge(clsx("relative min-w-0", wrapperClassName))}
+            onPointerDownCapture={(e) => {
+                if (e.pointerType === "mouse" && e.button !== 0) return;
+                fireOpenIntent();
+            }}
+        >
             <select
                 {...rest}
                 disabled={disabled}
-                onPointerDown={(e) => {
-                    if (!disabled) {
-                        if (e.pointerType !== "mouse" || e.button === 0) {
-                            onOpenIntent?.();
-                        }
-                    }
-                    onPointerDown?.(e);
-                }}
+                onPointerDown={onPointerDown}
                 onFocus={(e) => {
-                    if (!disabled) {
-                        onOpenIntent?.();
-                    }
+                    fireOpenIntent();
                     onFocus?.(e);
                 }}
                 className={twMerge(

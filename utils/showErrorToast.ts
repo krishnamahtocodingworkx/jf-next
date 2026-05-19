@@ -26,6 +26,10 @@ export function notifyResetPasswordApiError(error: unknown) {
   showErrorToast(error);
 }
 
+export function notifyProductApiError(error: unknown) {
+  showErrorToast(error);
+}
+
 /** Specialised toast for the recovery-password landing page when the `oobCode` is missing/expired. */
 export function notifyRecoveryLinkInvalid() {
   SHOW_ERROR_TOAST(AUTH_STRINGS.recoveryPassword.invalidLink);

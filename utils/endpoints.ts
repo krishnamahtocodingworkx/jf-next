@@ -39,8 +39,8 @@ export const ENDPOINTS = {
   },
   PRODUCTS: {
     LIST: `${API}/user/products/`,
-    /** Manufacturer list for Add Product ( `USER.MANUFACTURERS`). */
-    MANUFACTURERS: `${API}/products/manufacturers/`,
+    /** Manufacturer list for Add Product manufacturer select. */
+    MANUFACTURERS: `${API}/manufacturerProducts/manufacturer-product-list`,
     GET_PRODUCT_LIST: `${API}/product/get-product-list`,
     CREATE_PRODUCT: `${API}/product/create-product`,
     /** v1 product metrics / overview (detail page). */

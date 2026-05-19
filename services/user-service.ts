@@ -89,8 +89,8 @@ export const userService = {
         id: option.value,
         name: option.label,
       }));
-    } catch {
-      return [];
+    } catch (error) {
+      throw error;
     }
   },
 
@@ -100,8 +100,8 @@ export const userService = {
       const { data } = await api.get(ENDPOINTS.PROFILE.COMPANY_TYPE);
       const rows = unwrapCompanyTypeListRows(data);
       return normalizeEntitySelectOptions(rows);
-    } catch {
-      return [];
+    } catch (error) {
+      throw error;
     }
   },
 
@@ -116,14 +116,14 @@ export const userService = {
     }
   },
 
-  /** Manufacturer directory used by the Add Product manufacturer select. */
+  /** Manufacturer-product options for the Add Product manufacturer select (`manufacturer-product-list`). */
   async getManufacturers(): Promise<SelectOption[]> {
     try {
       const { data } = await api.get(ENDPOINTS.PRODUCTS.MANUFACTURERS);
       const rows = unwrapApiListData(data?.data ?? data);
       return normalizeEntitySelectOptions(rows);
-    } catch {
-      return [];
+    } catch (error) {
+      throw error;
     }
   },
 
@@ -158,8 +158,8 @@ export const userService = {
         if (companyId) filteredMap[option.value] = companyId;
       }
       return { items: deduped, companyByBrandId: filteredMap };
-    } catch {
-      return { items: [], companyByBrandId: {} };
+    } catch (error) {
+      throw error;
     }
   },
 };

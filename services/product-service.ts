@@ -130,15 +130,10 @@ export const productService = {
         }
     },
 
-    /** Create — used by the Add Product panel. */
+    /** Create — used by the Add Product panel; toasts are handled in `createAddProduct` thunk. */
     async addProduct(payload: Record<string, unknown>): Promise<unknown> {
-        try {
-            const { data } = await api.post(ENDPOINTS.PRODUCTS.CREATE_PRODUCT, payload);
-            return data?.data ?? data;
-        } catch (error) {
-            handleApiError(error, "Add Product");
-            throw error;
-        }
+        const { data } = await api.post(ENDPOINTS.PRODUCTS.CREATE_PRODUCT, payload);
+        return data;
     },
 
     /** AI-generated product recommendation (Generate module). */
@@ -193,8 +188,7 @@ export const productService = {
             const names = rows.map((row) => String(row.category ?? "").trim()).filter(Boolean);
             return [...new Set(names)];
         } catch (error) {
-            handleApiError(error, "Product category list");
-            return [];
+            throw error;
         }
     },
 
@@ -213,8 +207,7 @@ export const productService = {
             const row = pickCategoryListRow(rows, { category: value });
             return extractCategoryBundle(row);
         } catch (error) {
-            handleApiError(error, "Product category list");
-            return { productTypes: [], subCategories: [] };
+            throw error;
         }
     },
 
@@ -233,8 +226,7 @@ export const productService = {
             const row = pickCategoryListRow(rows, { subCategory: value });
             return extractCategoryBundle(row);
         } catch (error) {
-            handleApiError(error, "Product category list");
-            return { productTypes: [], subCategories: [] };
+            throw error;
         }
     },
 
@@ -247,8 +239,8 @@ export const productService = {
             const options =
                 fromCurrencyShape.length > 0 ? fromCurrencyShape : normalizeEntitySelectOptions(rows);
             return options.length ? options : [DEFAULT_CURRENCY];
-        } catch {
-            return [DEFAULT_CURRENCY];
+        } catch (error) {
+            throw error;
         }
     },
 };
