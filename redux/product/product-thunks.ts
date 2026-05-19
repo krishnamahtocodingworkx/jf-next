@@ -4,6 +4,21 @@ import type { SelectOption } from "@/utils/model";
 import { productService } from "@/services/product-service";
 import { userService } from "@/services/user-service";
 import { ingredientService } from "@/services/ingredient-service";
+import { extractApiErrorMessage } from "@/utils/commonFunctions";
+import { notifyApiSuccessToast } from "@/utils/showToast";
+import { notifyProductApiError } from "@/utils/showErrorToast";
+import { interceptorHandledNetworkOrTimeout } from "@/utils/service";
+
+/** Surfaces backend error toasts from thunks; skips network/timeout (interceptor already toasted). */
+function rejectWithApiToast(
+    error: unknown,
+    rejectWithValue: (value: string) => unknown,
+) {
+    if (!interceptorHandledNetworkOrTimeout(error)) {
+        notifyProductApiError(error);
+    }
+    return rejectWithValue(extractApiErrorMessage(error) ?? "");
+}
 
 /** Narrow shape of `state` this thunk reads from `getState` — keeps the slice/thunks loosely coupled. */
 type ProductCatalogSlice = {
@@ -77,10 +92,30 @@ const selectAddPanel = (state: unknown) => (state as AddPanelRefRoot).product.ad
 const isLoadOrLoaded = (status?: string) =>
     status === "loading" || status === "succeeded";
 
+/** Creates a product from the Add Product panel; success/error toasts use backend messages. */
+export const createAddProduct = createAsyncThunk(
+    "product/createAddProduct",
+    async (payload: Record<string, unknown>, { rejectWithValue }) => {
+        try {
+            const response = await productService.addProduct(payload);
+            notifyApiSuccessToast(response);
+            return response;
+        } catch (error) {
+            return rejectWithApiToast(error, rejectWithValue);
+        }
+    },
+);
+
 /** Loads company-type options the first time the Add Product company select is opened. */
 export const fetchAddProductCompanyTypes = createAsyncThunk(
     "product/fetchAddProductCompanyTypes",
-    () => userService.getCompanyTypeList(),
+    async (_, { rejectWithValue }) => {
+        try {
+            return await userService.getCompanyTypeList();
+        } catch (error) {
+            return rejectWithApiToast(error, rejectWithValue);
+        }
+    },
     {
         condition: (_, { getState }) =>
             !isLoadOrLoaded(selectAddPanel(getState()).companyTypes.status),
@@ -90,9 +125,13 @@ export const fetchAddProductCompanyTypes = createAsyncThunk(
 /** Loads top-level product categories on first focus of the category select. */
 export const fetchAddProductRootCategories = createAsyncThunk(
     "product/fetchAddProductRootCategories",
-    async () => {
-        const names = await productService.getCategoryListRoot();
-        return names.map<SelectOption>((name) => ({ value: name, label: name }));
+    async (_, { rejectWithValue }) => {
+        try {
+            const names = await productService.getCategoryListRoot();
+            return names.map<SelectOption>((name) => ({ value: name, label: name }));
+        } catch (error) {
+            return rejectWithApiToast(error, rejectWithValue);
+        }
     },
     {
         condition: (_, { getState }) => {
@@ -107,9 +146,13 @@ export const fetchAddProductRootCategories = createAsyncThunk(
 /** Drills into the chosen category to populate the product-type + subcategory selects. */
 export const fetchAddProductCategoryBundle = createAsyncThunk(
     "product/fetchAddProductCategoryBundle",
-    async (category: string) => {
-        const bundle = await productService.getCategoryListBundle(category);
-        return { category, ...bundle };
+    async (category: string, { rejectWithValue }) => {
+        try {
+            const bundle = await productService.getCategoryListBundle(category);
+            return { category, ...bundle };
+        } catch (error) {
+            return rejectWithApiToast(error, rejectWithValue);
+        }
     },
     {
         condition: (category, { getState }) => {
@@ -123,10 +166,14 @@ export const fetchAddProductCategoryBundle = createAsyncThunk(
 /** Same as above but keyed by subcategory (used when the user picks a subcategory first). */
 export const fetchAddProductSubCategoryBundle = createAsyncThunk(
     "product/fetchAddProductSubCategoryBundle",
-    async (subCategory: string) => {
-        const key = String(subCategory || "").trim();
-        const bundle = await productService.getCategoryListBundleBySubCategory(key);
-        return { subCategory: key, ...bundle };
+    async (subCategory: string, { rejectWithValue }) => {
+        try {
+            const key = String(subCategory || "").trim();
+            const bundle = await productService.getCategoryListBundleBySubCategory(key);
+            return { subCategory: key, ...bundle };
+        } catch (error) {
+            return rejectWithApiToast(error, rejectWithValue);
+        }
     },
     {
         condition: (subCategory, { getState }) => {
@@ -140,7 +187,13 @@ export const fetchAddProductSubCategoryBundle = createAsyncThunk(
 /** Loads brands + the brand→company lookup table on first focus of the brand select. */
 export const fetchAddProductBrands = createAsyncThunk(
     "product/fetchAddProductBrands",
-    () => userService.getProductBrandList(),
+    async (_, { rejectWithValue }) => {
+        try {
+            return await userService.getProductBrandList();
+        } catch (error) {
+            return rejectWithApiToast(error, rejectWithValue);
+        }
+    },
     {
         condition: (_, { getState }) => {
             const state = selectAddPanel(getState()).brands;
@@ -153,7 +206,13 @@ export const fetchAddProductBrands = createAsyncThunk(
 
 export const fetchAddProductManufacturersLazy = createAsyncThunk(
     "product/fetchAddProductManufacturersLazy",
-    () => userService.getManufacturers(),
+    async (_, { rejectWithValue }) => {
+        try {
+            return await userService.getManufacturers();
+        } catch (error) {
+            return rejectWithApiToast(error, rejectWithValue);
+        }
+    },
     {
         condition: (_, { getState }) =>
             !isLoadOrLoaded(selectAddPanel(getState()).manufacturers.status),
@@ -162,9 +221,13 @@ export const fetchAddProductManufacturersLazy = createAsyncThunk(
 
 export const fetchAddProductCountriesLazy = createAsyncThunk(
     "product/fetchAddProductCountriesLazy",
-    async () => {
-        const countryRows = await userService.getCountries();
-        return countryRows.map<SelectOption>((row) => ({ value: row.id, label: row.name }));
+    async (_, { rejectWithValue }) => {
+        try {
+            const countryRows = await userService.getCountries();
+            return countryRows.map<SelectOption>((row) => ({ value: row.id, label: row.name }));
+        } catch (error) {
+            return rejectWithApiToast(error, rejectWithValue);
+        }
     },
     {
         condition: (_, { getState }) =>
@@ -174,7 +237,13 @@ export const fetchAddProductCountriesLazy = createAsyncThunk(
 
 export const fetchAddProductCurrenciesLazy = createAsyncThunk(
     "product/fetchAddProductCurrenciesLazy",
-    () => productService.getCurrencyOptions(),
+    async (_, { rejectWithValue }) => {
+        try {
+            return await productService.getCurrencyOptions();
+        } catch (error) {
+            return rejectWithApiToast(error, rejectWithValue);
+        }
+    },
     {
         condition: (_, { getState }) =>
             !isLoadOrLoaded(selectAddPanel(getState()).currencies.status),
@@ -184,7 +253,7 @@ export const fetchAddProductCurrenciesLazy = createAsyncThunk(
 /** Typeahead search for the ingredient picker; page 1 replaces the list, page >1 appends. */
 export const searchAddProductIngredients = createAsyncThunk(
     "product/searchAddProductIngredients",
-    async (arg: { term: string; page: number; size?: number }) => {
+    async (arg: { term: string; page: number; size?: number }, { rejectWithValue }) => {
         const term = arg.term.trim();
         const page = Math.max(1, arg.page);
         const size = Math.max(1, arg.size ?? 20);
@@ -197,7 +266,11 @@ export const searchAddProductIngredients = createAsyncThunk(
                 pagination: { page: 1, pages: 1, size, total: 0 },
             };
         }
-        const { list, pagination } = await ingredientService.searchIngredients(term, page, size);
-        return { term, page, list, pagination };
+        try {
+            const { list, pagination } = await ingredientService.searchIngredients(term, page, size);
+            return { term, page, list, pagination };
+        } catch (error) {
+            return rejectWithApiToast(error, rejectWithValue);
+        }
     },
 );

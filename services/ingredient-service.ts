@@ -51,8 +51,7 @@ export const ingredientService = {
                 safeSize,
             );
         } catch (error) {
-            handleApiError(error, "Ingredient Search");
-            return { list: [], pagination: emptyIngredientPagination(safeSize) };
+            throw error;
         }
     },
 

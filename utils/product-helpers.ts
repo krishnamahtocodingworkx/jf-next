@@ -13,7 +13,6 @@ import {
     toFiniteNumber,
     unwrapApiListData,
 } from "@/utils/commonFunctions";
-
 /** Standardises raw API rows from v1 and legacy endpoints into a single shape (always has `id` + `brand` object). */
 export function normalizeProductListItem(raw: Record<string, unknown>): Record<string, unknown> {
     const id = String((raw._id as string | undefined) ?? (raw.id as string | undefined) ?? "");
@@ -53,10 +52,8 @@ export function buildCreateProductPayload(
         unit: String((row.unit as string | undefined) || "g"),
     }));
 
-    const manufacturerRaw =
-        values.manufacturer != null && String(values.manufacturer).trim() !== ""
-            ? String(values.manufacturer).trim()
-            : "";
+    // `manufacturer-product-list` row `_id` → create-product `manufacturer` (string id, never null).
+    const manufacturerRaw = String(values.manufacturer ?? "").trim();
     const brandIdRaw = values.brand_id ? String(values.brand_id).trim() : "";
     const profileCompany = profile?.company as { id?: string; _id?: string } | undefined;
     const companyIdRaw = values.company_id
@@ -64,7 +61,7 @@ export function buildCreateProductPayload(
         : String(profileCompany?.id || profileCompany?._id || "");
 
     const brandId = isValidMongoObjectId(brandIdRaw) ? brandIdRaw : "";
-    const manufacturerId = isValidMongoObjectId(manufacturerRaw) ? manufacturerRaw : null;
+    const manufacturerId = isValidMongoObjectId(manufacturerRaw) ? manufacturerRaw : "";
     const companyId = isValidMongoObjectId(companyIdRaw) ? companyIdRaw : "";
 
     const payload: Record<string, unknown> = {
@@ -78,8 +75,8 @@ export function buildCreateProductPayload(
         muteNotifications: false,
         muteAnalytics: false,
         newVersion: false,
+        manufacturer: manufacturerId,
     };
-    if (manufacturerId) payload.manufacturer = manufacturerId;
     return payload;
 }
 

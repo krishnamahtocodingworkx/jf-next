@@ -29,12 +29,15 @@ export default function RegisterPage() {
 
   // Load dropdown options once on mount — both calls run in parallel.
   useEffect(() => {
-    void Promise.all([userService.getCompanyTypeList(), userService.getCountries()]).then(
-      ([types, normalizedCountries]) => {
+    void Promise.all([userService.getCompanyTypeList(), userService.getCountries()])
+      .then(([types, normalizedCountries]) => {
         setCompanyTypes(types);
         setCountries(normalizedCountries);
-      },
-    );
+      })
+      .catch(() => {
+        setCompanyTypes([]);
+        setCountries([]);
+      });
   }, []);
 
   // Alphabetised country list for the select.

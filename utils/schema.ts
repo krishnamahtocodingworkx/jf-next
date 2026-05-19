@@ -98,7 +98,7 @@ export const registerSchema = RegisterSchema();
 export const forgotPasswordSchema = ForgotPasswordSchema();
 export const recoveryPasswordSchema = RecoveryPasswordSchema();
 
-/** Add Product form — company id + product name + optional manufacturer (Mongo-style ids). */
+/** Add Product form — company id + product name + required manufacturer (`manufacturer-product-list` _id). */
 export const AddProductFormSchema = () =>
   Yup.object({
     company: Yup.string()
@@ -108,15 +108,12 @@ export const AddProductFormSchema = () =>
         isValidMongoObjectId(String(v ?? "").trim()),
       ),
     name: Yup.string().trim().required("Product name is required"),
-    manufacturer: Yup.string().test(
-      "manufacturer-id",
-      "Please select a manufacturer from the list, or leave it blank.",
-      (v) => {
-        const s = String(v ?? "").trim();
-        if (!s) return true;
-        return isValidMongoObjectId(s);
-      },
-    ),
+    manufacturer: Yup.string()
+      .trim()
+      .required("Please select a manufacturer from the list.")
+      .test("manufacturer-product-id", "Please select a manufacturer from the list.", (v) =>
+        isValidMongoObjectId(String(v ?? "").trim()),
+      ),
     category: Yup.string().default(""),
     productType: Yup.string().default(""),
     subcategory: Yup.string().default(""),

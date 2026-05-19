@@ -1,14 +1,13 @@
 "use client";
 
 // Side panel for creating a new product — lazy-loads its dropdowns, debounces the ingredient search,
-// validates the form, then POSTs through `productService.addProduct`. Parent owns mount lifecycle.
+// validates the form, then POSTs via `createAddProduct` thunk. Parent owns mount lifecycle.
 import { useEffect, useLayoutEffect, useState } from "react";
 import { Package, Save, X } from "lucide-react";
-import { productService } from "@/services/product-service";
 import { buildCreateProductPayload } from "@/utils/product-helpers";
-import { notifyApiSuccessToast } from "@/utils/showToast";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
+  createAddProduct,
   fetchAddProductBrands,
   fetchAddProductCategoryBundle,
   fetchAddProductCompanyTypes,
@@ -23,7 +22,6 @@ import {
   clearAddProductIngredientSearch,
   resetAddProductPanel,
 } from "@/redux/product/product-slice";
-import { getErrorMessage } from "@/utils/commonFunctions";
 import { ADD_PRODUCT_INITIAL_VALUES } from "@/utils/initialValues";
 import type {
   AddProductFormValues,
@@ -209,12 +207,12 @@ export default function AddProductPanel({ onClose, onCreated }: AddProductPanelP
         },
         profile as Record<string, unknown> | null,
       );
-      await productService.addProduct(payload);
-      notifyApiSuccessToast({ message: "Product created" });
+      await dispatch(createAddProduct(payload)).unwrap();
       onCreated?.();
       resetAndClose();
     } catch (e) {
-      setError(getErrorMessage(e, "Failed to create product. Try again."));
+      const msg = typeof e === "string" ? e.trim() : "";
+      if (msg) setError(msg);
     } finally {
       setSubmitting(false);
     }
