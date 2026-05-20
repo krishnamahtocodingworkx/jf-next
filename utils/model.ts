@@ -1,4 +1,4 @@
-// Centralised type aliases (auth, forms, redux slice state, service payloads).
+// Centralised type aliases (auth, forms, redux slice state, packaging UI props, service payloads).
 // Interfaces live in `interfaces/<module>.ts`; only `type` declarations live here.
 import type { ISupplierIngredient, IIngredientPagination } from "@/interfaces/ingredient";
 import type { IProduct } from "@/interfaces/product";
@@ -265,4 +265,169 @@ export type ProductsPageResponse = {
   totalPages: number;
   nextHit: boolean;
   limit: number;
+};
+
+// ───────────────────────────── Packaging ─────────────────────────────────
+
+/** Channel / segment tag shown on packaging rows */
+export type PackagingTag = "Retail" | "Food Service" | "E-Commerce" | "Industrial";
+
+/** Mock catalog product lifecycle for packaging association UI */
+export type PackagingProductStatus = "Active" | "Concept";
+
+export type PackageItem = {
+  id: string;
+  name: string;
+  type: string;
+  market: string;
+  material: string;
+  score: number | null;
+  costVariance: string | null;
+  tag: PackagingTag;
+  associatedProducts: string[];
+};
+
+/** Product row used in packaging association flows */
+export type PackagingProduct = {
+  id: string;
+  name: string;
+  sku: string;
+  status: PackagingProductStatus;
+  packagingId: string | null;
+};
+
+export type SustainabilityPoint = {
+  month: string;
+  value: number;
+};
+
+/** SVG path point from {@link buildSustainabilityChartPoints}. */
+export type PackagingSustainabilityChartPoint = {
+  x: number;
+  y: number;
+  month: string;
+  value: number;
+};
+
+export type PackagingAssociateModalCopy = {
+  title: string;
+  saveButton: string;
+  cancelButton: string;
+};
+
+export type AssociatePackageModalProps = {
+  pkg: PackageItem;
+  products: PackagingProduct[];
+  onClose: () => void;
+  onSave: (pkgId: string, productIds: string[]) => void;
+  copy: PackagingAssociateModalCopy;
+};
+
+export type PackagingDetailDrawerStatLabels = {
+  type: string;
+  material: string;
+  market: string;
+  costVariance: string;
+};
+
+export type PackagingDetailDrawerCopy = {
+  statLabels: PackagingDetailDrawerStatLabels;
+  costVarianceNoData: string;
+  packagingScore: string;
+  associatedProducts: string;
+  manageLink: string;
+  emptyAssociated: string;
+};
+
+export type PackageDetailDrawerProps = {
+  pkg: PackageItem;
+  products: PackagingProduct[];
+  onClose: () => void;
+  onAssociate: () => void;
+  copy: PackagingDetailDrawerCopy;
+  scoreBadgeCopy: PackagingScoreBadgeCopy;
+};
+
+export type PackagingScoreBadgeCopy = {
+  emptyLabel: string;
+};
+
+export type PackagingScoreBadgeProps = {
+  score: number | null;
+  copy: PackagingScoreBadgeCopy;
+};
+
+export type PackagingSustainabilityMiniChartCopy = {
+  headlineScore: string;
+  deltaLabel: string;
+  improvementTitle: string;
+};
+
+export type PackagingSustainabilityMiniChartProps = {
+  points: SustainabilityPoint[];
+  copy: PackagingSustainabilityMiniChartCopy;
+  chartMax?: number;
+  chartHeight?: number;
+  chartWidth?: number;
+  yGridValues?: readonly number[];
+  yAxisLabels?: readonly number[];
+};
+
+export type PackagingDashboardActionsCopy = {
+  title: string;
+  notificationsPending: string;
+  actionsPending: string;
+  viewAll: string;
+};
+
+export type PackagingDashboardUnmatchedCopy = {
+  unmatchedLabel: string;
+  activeProducts: string;
+  conceptProducts: string;
+};
+
+export type PackagingDashboardTableHeadersCopy = {
+  packageName: string;
+  costVariance: string;
+  market: string;
+  material: string;
+  score: string;
+  actions: string;
+};
+
+export type PackagingDashboardRecommendationsCopy = {
+  title: string;
+  matchedPackagesLineTemplate: string;
+  showAllPackages: string;
+  tableHeaders: PackagingDashboardTableHeadersCopy;
+  associateProductsAriaTitle: string;
+  viewButton: string;
+  linkedProductsSingularTemplate: string;
+  linkedProductsPluralTemplate: string;
+};
+
+export type PackagingDashboardAlertCopy = {
+  unassignedTitleTemplate: string;
+  bodyBeforeLink: string;
+  linkWord: string;
+  bodyAfterLink: string;
+  autoMatch: string;
+};
+
+/** All user-facing copy for the packaging dashboard and its subcomponents */
+export type PackagingDashboardCopy = {
+  actions: PackagingDashboardActionsCopy;
+  unmatched: PackagingDashboardUnmatchedCopy;
+  recommendations: PackagingDashboardRecommendationsCopy;
+  alert: PackagingDashboardAlertCopy;
+  associateModal: PackagingAssociateModalCopy;
+  detailDrawer: PackagingDetailDrawerCopy;
+  scoreBadge: PackagingScoreBadgeCopy;
+  sustainabilityChart: PackagingSustainabilityMiniChartCopy;
+};
+
+export type PackagingDashboardProps = {
+  packages?: PackageItem[];
+  products?: PackagingProduct[];
+  copy?: PackagingDashboardCopy;
 };

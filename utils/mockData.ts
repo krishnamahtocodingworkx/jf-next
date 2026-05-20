@@ -1,7 +1,13 @@
-// Mock compliance data used by the Overview + Product detail pages.
-// All types live in `@/utils/model` and interfaces in `@/interfaces/compliance`; this file owns data + lookups only.
+// Mock data: compliance (Overview + product detail), packaging dashboard, and shared lookups.
+// Compliance interfaces: `@/interfaces/compliance`. Shared / packaging types: `@/utils/model`.
 import { COMPLIANCE_REGION_DISPLAY } from "@/utils/enum";
-import type { ComplianceStatus, RuleSeverity } from "@/utils/model";
+import type {
+  ComplianceStatus,
+  RuleSeverity,
+  PackageItem,
+  PackagingProduct,
+  SustainabilityPoint,
+} from "@/utils/model";
 import type {
   ComplianceIssue,
   Country,
@@ -380,3 +386,160 @@ export function getAllComplianceIssues(): ComplianceIssue[] {
     return severityOrder[a.severity] - severityOrder[b.severity]
   })
 }
+
+// ─── Packaging dashboard (mock) ────────────────────────────────────────────────
+
+/** Pagination page size for the packaging recommendations table mock. */
+export const PACKAGING_ITEMS_PER_PAGE = 6
+
+export const packagingPackagesData: PackageItem[] = [
+  {
+    id: "p1",
+    name: "Rollstock for Form/Fill/Seal (pouching)",
+    type: "Flexible Pouch",
+    market: "Europe, North America",
+    material: "Multi-layer LDPE",
+    score: 72,
+    costVariance: null,
+    tag: "Retail",
+    associatedProducts: ["prod-1", "prod-3"],
+  },
+  {
+    id: "p2",
+    name: "PRO-POUCH: Spouted",
+    type: "Stand-Up Pouch",
+    market: "Europe, North America",
+    material: "PET/Foil/PE",
+    score: 68,
+    costVariance: "-$0.08",
+    tag: "Retail",
+    associatedProducts: ["prod-2"],
+  },
+  {
+    id: "p3",
+    name: "PRO-POUCH: Shaped",
+    type: "Stand-Up Pouch",
+    market: "Europe, North America",
+    material: "OPP/PE",
+    score: 74,
+    costVariance: "+$0.12",
+    tag: "Retail",
+    associatedProducts: [],
+  },
+  {
+    id: "p4",
+    name: "PRO-POUCH: Side Gusset",
+    type: "Side Gusset Bag",
+    market: "Europe, North America",
+    material: "Kraft/PE",
+    score: 80,
+    costVariance: null,
+    tag: "Retail",
+    associatedProducts: ["prod-4"],
+  },
+  {
+    id: "p5",
+    name: "PRO-POUCH: Inserted Gusset Stand Up Pouch",
+    type: "Stand-Up Pouch",
+    market: "Europe, North America",
+    material: "BOPP/Metalized PET",
+    score: 66,
+    costVariance: "+$0.22",
+    tag: "Retail",
+    associatedProducts: [],
+  },
+  {
+    id: "p6",
+    name: "PRO-POUCH: Plow Bottom Stand Up Pouch",
+    type: "Stand-Up Pouch",
+    market: "Europe, North America",
+    material: "Clear PET/PE",
+    score: 71,
+    costVariance: "-$0.05",
+    tag: "Retail",
+    associatedProducts: [],
+  },
+  {
+    id: "p7",
+    name: "Biodegradable Kraft Box",
+    type: "Rigid Box",
+    market: "North America",
+    material: "FSC Certified Kraft",
+    score: 92,
+    costVariance: "+$0.35",
+    tag: "Retail",
+    associatedProducts: ["prod-5"],
+  },
+  {
+    id: "p8",
+    name: "Glass Jar 8oz",
+    type: "Glass Container",
+    market: "North America, APAC",
+    material: "Borosilicate Glass",
+    score: 88,
+    costVariance: "+$0.55",
+    tag: "Retail",
+    associatedProducts: [],
+  },
+  {
+    id: "p9",
+    name: "Compostable Sleeve",
+    type: "Sleeve Label",
+    market: "Europe",
+    material: "PLA-based Film",
+    score: 95,
+    costVariance: "+$0.18",
+    tag: "Retail",
+    associatedProducts: ["prod-2", "prod-3"],
+  },
+  {
+    id: "p10",
+    name: "Bulk Corrugated Shipper",
+    type: "Corrugated Box",
+    market: "North America",
+    material: "Recycled Corrugated",
+    score: 85,
+    costVariance: "-$0.40",
+    tag: "Food Service",
+    associatedProducts: ["prod-4"],
+  },
+  {
+    id: "p11",
+    name: "Retort Pouch",
+    type: "Retort Pouch",
+    market: "Global",
+    material: "Foil/Nylon/PP",
+    score: 58,
+    costVariance: null,
+    tag: "Food Service",
+    associatedProducts: [],
+  },
+  {
+    id: "p12",
+    name: "Mailer Box — DTC",
+    type: "Mailer Box",
+    market: "North America",
+    material: "White Clay-Coated Board",
+    score: 78,
+    costVariance: "+$0.10",
+    tag: "E-Commerce",
+    associatedProducts: ["prod-1"],
+  },
+]
+
+export const packagingProductsData: PackagingProduct[] = [
+  { id: "prod-1", name: "Mango Turmeric Blend", sku: "SKU-1042", status: "Active", packagingId: "p1" },
+  { id: "prod-2", name: "Buckwheat Protein Bar", sku: "SKU-2017", status: "Active", packagingId: "p2" },
+  { id: "prod-3", name: "Spirulina Energy Shot", sku: "SKU-3301", status: "Concept", packagingId: null },
+  { id: "prod-4", name: "Oat Fiber Powder", sku: "SKU-0889", status: "Active", packagingId: "p4" },
+  { id: "prod-5", name: "Pea Protein Isolate Mix", sku: "SKU-5512", status: "Concept", packagingId: null },
+]
+
+export const packagingSustainabilityPointsData: SustainabilityPoint[] = [
+  { month: "Sept", value: 10 },
+  { month: "Oct", value: 22 },
+  { month: "Nov", value: 30 },
+  { month: "Dec", value: 42 },
+  { month: "Jan", value: 55 },
+  { month: "Feb", value: 52 },
+]
