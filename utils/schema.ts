@@ -136,7 +136,7 @@ export const AddProductFormSchema = () =>
     country: Yup.string().default(""),
     currency: Yup.string().default(""),
     objectives: Yup.array().of(Yup.string().defined()).default([]),
-    notes: Yup.string().default(""),
+    description: Yup.string().trim().optional().default(""),
   });
 
 /** Cached instance used by the Add Product panel. */

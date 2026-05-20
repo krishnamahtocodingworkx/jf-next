@@ -157,7 +157,7 @@ export type AddProductFormValues = {
   country: string;
   currency: string;
   objectives: string[];
-  notes: string;
+  description: string;
 };
 
 /** Row in the Add Product ingredient list (id may be a real ingredient or a `custom:` placeholder). */

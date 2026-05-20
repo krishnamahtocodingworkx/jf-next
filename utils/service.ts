@@ -44,6 +44,14 @@ export type ErrorResponse = {
 
 type RetriableConfig = InternalAxiosRequestConfig & { _retry?: boolean };
 
+type RefreshTokenApiData = {
+  accessToken?: string;
+  refreshToken?: string;
+};
+
+/** In-flight refresh so parallel 401s share one `/users/refresh-token` call. */
+let refreshIdTokenPromise: Promise<string> | null = null;
+
 /** True if the axios interceptor already toasted a network/timeout failure. */
 export function interceptorHandledNetworkOrTimeout(error: unknown): boolean {
   const e = error as { status?: number };
@@ -55,6 +63,65 @@ function sessionExpireHandler() {
   if (typeof window === "undefined") return;
   localStorage.clear();
   window.location.replace(routes.LOGIN);
+}
+
+/** Reads refresh token from Redux, falling back to the legacy localStorage key. */
+async function resolveRefreshToken(): Promise<string> {
+  const { store } = await import("@/redux/store");
+  return (
+    store.getState().user.refreshToken ||
+    storage.getItem("refresh_token") ||
+    ""
+  );
+}
+
+/** Calls `/users/refresh-token`, re-mints the Firebase idToken, and updates Redux + storage. */
+async function refreshAccessToken(): Promise<string> {
+  if (!refreshIdTokenPromise) {
+    refreshIdTokenPromise = (async () => {
+      const refreshToken = await resolveRefreshToken();
+      if (!refreshToken) {
+        throw new Error("No refresh token available");
+      }
+
+      console.log("[auth] Refreshing access token via /users/refresh-token");
+
+      const refreshResponse = await axios.post<{ data?: RefreshTokenApiData }>(
+        BASE_URL + ENDPOINTS.AUTH.REFRESH_TOKEN,
+        { refreshToken },
+      );
+      const newAccessToken = refreshResponse.data?.data?.accessToken;
+      if (!newAccessToken) {
+        throw new Error("Refresh response missing accessToken");
+      }
+
+      const firebaseRes = await signInWithCustomToken(auth, newAccessToken);
+      const newIdToken = await firebaseRes.user.getIdToken();
+      const newRefreshToken = refreshResponse.data?.data?.refreshToken;
+
+      storage.setItem("access_token", newAccessToken);
+      storage.setItem("refresh_token", newRefreshToken || refreshToken);
+      storage.setItem("idToken", newIdToken);
+
+      const { store } = await import("@/redux/store");
+      const { updateTokens } = await import("@/redux/user/user-slice");
+      store.dispatch(
+        updateTokens({
+          accessToken: newAccessToken,
+          refreshToken: newRefreshToken,
+          idToken: newIdToken,
+        }),
+      );
+
+      console.log("[auth] Access token refreshed successfully");
+
+      return newIdToken;
+    })().finally(() => {
+      refreshIdTokenPromise = null;
+    });
+  }
+
+  return refreshIdTokenPromise;
 }
 
 /** Builds the configured axios instance shared by all services. */
@@ -114,42 +181,11 @@ function createAxiosInstance(baseURL: string): AxiosInstance {
       if (status === STATUS_CODE.Unauthorized && originalReq && !originalReq._retry) {
         originalReq._retry = true;
         try {
-          const { store } = await import("@/redux/store");
-          const refreshToken = store.getState().user.refreshToken;
-          if (!refreshToken) {
-            sessionExpireHandler();
-            return Promise.reject({ message: "Session expired", status });
-          }
-
-          // Exchange the refresh token for a new access/refresh pair, then re-mint the Firebase idToken.
-          const refreshResponse = await axios.post(
-            BASE_URL + ENDPOINTS.AUTH.REFRESH_TOKEN,
-            { refresh_token: refreshToken },
-          );
-          const newAccessToken = refreshResponse.data.data?.accessToken;
-          const newRefreshToken = refreshResponse.data.data?.refreshToken;
-
-          const firebaseRes = await signInWithCustomToken(auth, newAccessToken);
-          const newIdToken = await firebaseRes.user.getIdToken();
-
-          // Persist new tokens to both storage and Redux so subsequent requests use them.
-          storage.setItem("access_token", newAccessToken);
-          storage.setItem("refresh_token", newRefreshToken || refreshToken);
-          storage.setItem("idToken", newIdToken);
-
-          const { updateTokens } = await import("@/redux/user/user-slice");
-          store.dispatch(
-            updateTokens({
-              accessToken: newAccessToken,
-              refreshToken: newRefreshToken,
-              idToken: newIdToken,
-            }),
-          );
-
-          // Replay the original request with the fresh token.
+          const newIdToken = await refreshAccessToken();
           originalReq.headers.Authorization = `Bearer ${newIdToken}`;
           return instance(originalReq);
-        } catch {
+        } catch (refreshError) {
+          console.log("[auth] Refresh token flow failed", refreshError);
           sessionExpireHandler();
           return Promise.reject({ message: "Session expired", status });
         }
