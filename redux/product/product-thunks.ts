@@ -1,6 +1,16 @@
 // Product thunks — drive catalog fetching, detail loads, and the lazy Add Product dropdown loads.
 import { createAsyncThunk } from "@reduxjs/toolkit";
-import type { SelectOption } from "@/utils/model";
+import type { IProduct } from "@/interfaces/product";
+import type {
+    AddPanelIngredientSearchPayload,
+    CategoryBundleThunkPayload,
+    ProductAddPanelState,
+    ProductApiThunkConfig,
+    ProductBrandListPayload,
+    ProductsPageResponse,
+    SelectOption,
+    SubCategoryBundleThunkPayload,
+} from "@/utils/model";
 import { productService } from "@/services/product-service";
 import { userService } from "@/services/user-service";
 import { ingredientService } from "@/services/ingredient-service";
@@ -10,10 +20,10 @@ import { notifyProductApiError } from "@/utils/showErrorToast";
 import { interceptorHandledNetworkOrTimeout } from "@/utils/service";
 
 /** Surfaces backend error toasts from thunks; skips network/timeout (interceptor already toasted). */
-function rejectWithApiToast(
+function rejectWithApiToast<Rejected>(
     error: unknown,
-    rejectWithValue: (value: string) => unknown,
-) {
+    rejectWithValue: (value: string) => Rejected,
+): Rejected {
     if (!interceptorHandledNetworkOrTimeout(error)) {
         notifyProductApiError(error);
     }
@@ -31,7 +41,11 @@ type ProductCatalogSlice = {
 };
 
 /** Re-fetches the catalog page; reads current filters/pagination directly from Redux state. */
-export const fetchProductCatalog = createAsyncThunk(
+export const fetchProductCatalog = createAsyncThunk<
+    ProductsPageResponse,
+    void,
+    { rejectValue: unknown }
+>(
     "product/fetchCatalog",
     async (_, { getState, rejectWithValue }) => {
         const { catalog } = (getState() as { product: ProductCatalogSlice }).product;
@@ -56,7 +70,11 @@ export const fetchProductCatalog = createAsyncThunk(
 );
 
 /** Loads a single product for the `[id]` detail page; rejects `NOT_FOUND` so the page can show a friendly 404. */
-export const fetchProductDetail = createAsyncThunk(
+export const fetchProductDetail = createAsyncThunk<
+    { id: string; product: IProduct },
+    string,
+    { rejectValue: string }
+>(
     "product/fetchDetail",
     async (id: string, { rejectWithValue }) => {
         const product = await productService.getProductById(id);
@@ -68,21 +86,17 @@ export const fetchProductDetail = createAsyncThunk(
 /** Subset of the root state read by the lazy add-panel thunks (kept local to avoid circular imports). */
 type AddPanelRefRoot = {
     product: {
-        addPanel: {
-            companyTypes: { status: string };
-            rootCategories: { status: string; items: unknown[] };
-            categoryBundles: Record<string, { status?: string } | undefined>;
-            subCategoryBundles: Record<string, { status?: string } | undefined>;
-            brands: {
-                status: string;
-                items: SelectOption[];
-                enrichment: string;
-                companyByBrandId: Record<string, string>;
-            };
-            manufacturers: { status: string };
-            countries: { status: string };
-            currencies: { status: string };
-        };
+        addPanel: Pick<
+            ProductAddPanelState,
+            | "companyTypes"
+            | "rootCategories"
+            | "categoryBundles"
+            | "subCategoryBundles"
+            | "brands"
+            | "manufacturers"
+            | "countries"
+            | "currencies"
+        >;
     };
 };
 
@@ -93,7 +107,11 @@ const isLoadOrLoaded = (status?: string) =>
     status === "loading" || status === "succeeded";
 
 /** Creates a product from the Add Product panel; success/error toasts use backend messages. */
-export const createAddProduct = createAsyncThunk(
+export const createAddProduct = createAsyncThunk<
+    unknown,
+    Record<string, unknown>,
+    ProductApiThunkConfig
+>(
     "product/createAddProduct",
     async (payload: Record<string, unknown>, { rejectWithValue }) => {
         try {
@@ -107,7 +125,11 @@ export const createAddProduct = createAsyncThunk(
 );
 
 /** Loads company-type options the first time the Add Product company select is opened. */
-export const fetchAddProductCompanyTypes = createAsyncThunk(
+export const fetchAddProductCompanyTypes = createAsyncThunk<
+    SelectOption[],
+    void,
+    ProductApiThunkConfig
+>(
     "product/fetchAddProductCompanyTypes",
     async (_, { rejectWithValue }) => {
         try {
@@ -123,7 +145,11 @@ export const fetchAddProductCompanyTypes = createAsyncThunk(
 );
 
 /** Loads top-level product categories on first focus of the category select. */
-export const fetchAddProductRootCategories = createAsyncThunk(
+export const fetchAddProductRootCategories = createAsyncThunk<
+    SelectOption[],
+    void,
+    ProductApiThunkConfig
+>(
     "product/fetchAddProductRootCategories",
     async (_, { rejectWithValue }) => {
         try {
@@ -144,7 +170,11 @@ export const fetchAddProductRootCategories = createAsyncThunk(
 );
 
 /** Drills into the chosen category to populate the product-type + subcategory selects. */
-export const fetchAddProductCategoryBundle = createAsyncThunk(
+export const fetchAddProductCategoryBundle = createAsyncThunk<
+    CategoryBundleThunkPayload,
+    string,
+    ProductApiThunkConfig
+>(
     "product/fetchAddProductCategoryBundle",
     async (category: string, { rejectWithValue }) => {
         try {
@@ -164,7 +194,11 @@ export const fetchAddProductCategoryBundle = createAsyncThunk(
 );
 
 /** Same as above but keyed by subcategory (used when the user picks a subcategory first). */
-export const fetchAddProductSubCategoryBundle = createAsyncThunk(
+export const fetchAddProductSubCategoryBundle = createAsyncThunk<
+    SubCategoryBundleThunkPayload,
+    string,
+    ProductApiThunkConfig
+>(
     "product/fetchAddProductSubCategoryBundle",
     async (subCategory: string, { rejectWithValue }) => {
         try {
@@ -185,7 +219,11 @@ export const fetchAddProductSubCategoryBundle = createAsyncThunk(
 );
 
 /** Loads brands + the brand→company lookup table on first focus of the brand select. */
-export const fetchAddProductBrands = createAsyncThunk(
+export const fetchAddProductBrands = createAsyncThunk<
+    ProductBrandListPayload,
+    void,
+    ProductApiThunkConfig
+>(
     "product/fetchAddProductBrands",
     async (_, { rejectWithValue }) => {
         try {
@@ -204,7 +242,11 @@ export const fetchAddProductBrands = createAsyncThunk(
     },
 );
 
-export const fetchAddProductManufacturersLazy = createAsyncThunk(
+export const fetchAddProductManufacturersLazy = createAsyncThunk<
+    SelectOption[],
+    void,
+    ProductApiThunkConfig
+>(
     "product/fetchAddProductManufacturersLazy",
     async (_, { rejectWithValue }) => {
         try {
@@ -219,7 +261,11 @@ export const fetchAddProductManufacturersLazy = createAsyncThunk(
     },
 );
 
-export const fetchAddProductCountriesLazy = createAsyncThunk(
+export const fetchAddProductCountriesLazy = createAsyncThunk<
+    SelectOption[],
+    void,
+    ProductApiThunkConfig
+>(
     "product/fetchAddProductCountriesLazy",
     async (_, { rejectWithValue }) => {
         try {
@@ -235,7 +281,11 @@ export const fetchAddProductCountriesLazy = createAsyncThunk(
     },
 );
 
-export const fetchAddProductCurrenciesLazy = createAsyncThunk(
+export const fetchAddProductCurrenciesLazy = createAsyncThunk<
+    SelectOption[],
+    void,
+    ProductApiThunkConfig
+>(
     "product/fetchAddProductCurrenciesLazy",
     async (_, { rejectWithValue }) => {
         try {
@@ -251,7 +301,11 @@ export const fetchAddProductCurrenciesLazy = createAsyncThunk(
 );
 
 /** Typeahead search for the ingredient picker; page 1 replaces the list, page >1 appends. */
-export const searchAddProductIngredients = createAsyncThunk(
+export const searchAddProductIngredients = createAsyncThunk<
+    AddPanelIngredientSearchPayload,
+    { term: string; page: number; size?: number },
+    ProductApiThunkConfig
+>(
     "product/searchAddProductIngredients",
     async (arg: { term: string; page: number; size?: number }, { rejectWithValue }) => {
         const term = arg.term.trim();

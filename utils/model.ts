@@ -267,6 +267,42 @@ export type ProductsPageResponse = {
   limit: number;
 };
 
+/** Product types + subcategories from the category-list API. */
+export type CategoryListBundle = {
+  productTypes: string[];
+  subCategories: string[];
+};
+
+/** Payload returned by `fetchAddProductCategoryBundle`. */
+export type CategoryBundleThunkPayload = CategoryListBundle & {
+  category: string;
+};
+
+/** Payload returned by `fetchAddProductSubCategoryBundle`. */
+export type SubCategoryBundleThunkPayload = CategoryListBundle & {
+  subCategory: string;
+};
+
+/** Payload returned by `fetchAddProductBrands`. */
+export type ProductBrandListPayload = {
+  items: SelectOption[];
+  companyByBrandId: Record<string, string>;
+};
+
+/** Payload returned by `searchAddProductIngredients`. */
+export type AddPanelIngredientSearchPayload = {
+  term: string;
+  page: number;
+  list: ISupplierIngredient[];
+  pagination: IIngredientPagination;
+};
+
+/** Standard `rejectValue` for Add Product panel API thunks. */
+export type ProductApiThunkRejectValue = string;
+
+/** Shared async-thunk config for Add Product panel API thunks. */
+export type ProductApiThunkConfig = { rejectValue: ProductApiThunkRejectValue };
+
 // ───────────────────────────── Packaging ─────────────────────────────────
 
 /** Channel / segment tag shown on packaging rows */
