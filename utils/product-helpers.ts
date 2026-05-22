@@ -409,7 +409,7 @@ export const emptyAddPanelBrandsState = (): AddPanelBrandsState => ({
 
 /** Builds the full add-panel slice with every field in `idle`. */
 export const createInitialAddPanelState = (): ProductAddPanelState => ({
-  companyTypes: emptyAddPanelListField(),
+  companies: emptyAddPanelListField(),
   rootCategories: emptyAddPanelListField(),
   categoryBundles: {},
   subCategoryBundles: {},

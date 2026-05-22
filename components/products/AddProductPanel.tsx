@@ -2,7 +2,7 @@
 
 // Side panel for creating a new product — lazy-loads its dropdowns, debounces the ingredient search,
 // validates the form, then POSTs via `createAddProduct` thunk. Parent owns mount lifecycle.
-import { useCallback, useEffect, useLayoutEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Package, Save, X } from "lucide-react";
 import { buildCreateProductPayload } from "@/utils/product-helpers";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
@@ -10,7 +10,7 @@ import {
   createAddProduct,
   fetchAddProductBrands,
   fetchAddProductCategoryBundle,
-  fetchAddProductCompanyTypes,
+  fetchAddProductCompanies,
   fetchAddProductCountriesLazy,
   fetchAddProductCurrenciesLazy,
   fetchAddProductManufacturersLazy,
@@ -65,6 +65,16 @@ const selectMuted = twMerge(clsx(selectField, "bg-slate-50"));
 const chk =
   "h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500";
 
+/** Client-side filter for Add Product AsyncAutocomplete fields (data prefetched via Redux). */
+function filterAddPanelOptions(
+  items: { value: string; label: string }[],
+  query: string,
+) {
+  const q = query.trim().toLowerCase();
+  if (!q) return items.slice(0, 50);
+  return items.filter((o) => o.label.toLowerCase().includes(q));
+}
+
 export default function AddProductPanel({
   onClose,
   onCreated,
@@ -97,28 +107,20 @@ export default function AddProductPanel({
     }
   }
 
-  const resolveBrandLabel = useCallback(
-    (brandId: string) =>
-      addPanel.brands.items.find((o) => o.value === brandId)?.label,
+  const resolveBrandLabel = (brandId: string) =>
+    addPanel.brands.items.find((o) => o.value === brandId)?.label;
+
+  const searchProductBrands = useCallback(
+    async (query: string) => filterAddPanelOptions(addPanel.brands.items, query),
     [addPanel.brands.items],
   );
 
-  const searchProductBrands = useCallback(
-    async (query: string) => {
-      let items = addPanel.brands.items;
-      if (addPanel.brands.status !== "succeeded") {
-        try {
-          const payload = await dispatch(fetchAddProductBrands()).unwrap();
-          items = payload.items;
-        } catch {
-          return [];
-        }
-      }
-      const q = query.trim().toLowerCase();
-      if (!q) return items.slice(0, 50);
-      return items.filter((o) => o.label.toLowerCase().includes(q));
-    },
-    [addPanel.brands.items, addPanel.brands.status, dispatch],
+  const resolveCompanyLabel = (companyId: string) =>
+    addPanel.companies.items.find((o) => o.value === companyId)?.label;
+
+  const searchProductCompanies = useCallback(
+    async (query: string) => filterAddPanelOptions(addPanel.companies.items, query),
+    [addPanel.companies.items],
   );
 
   // Reset Redux dropdown caches when the panel unmounts so the next open starts fresh.
@@ -128,9 +130,9 @@ export default function AddProductPanel({
     };
   }, [dispatch]);
 
-  // Start dropdown API calls as soon as the panel mounts so first click does not wait on the network.
-  useLayoutEffect(() => {
-    void dispatch(fetchAddProductCompanyTypes());
+  // Prefetch dropdown options on mount so the first open does not wait on the network.
+  useEffect(() => {
+    void dispatch(fetchAddProductCompanies());
     void dispatch(fetchAddProductRootCategories());
     void dispatch(fetchAddProductBrands());
     void dispatch(fetchAddProductManufacturersLazy());
@@ -333,23 +335,40 @@ export default function AddProductPanel({
           )}
 
           <div>
-            <label className={lbl}>Select Company</label>
+            <label className={lbl} htmlFor="add-product-company">
+              Select Company
+            </label>
+            <AsyncAutocomplete
+              id="add-product-company"
+              aria-label="Product company"
+              value={formData.company}
+              onChange={(companyId) => updateField("company", companyId)}
+              onSearch={searchProductCompanies}
+              resolveLabel={resolveCompanyLabel}
+              placeholder="Search company…"
+              emptyMessage="No companies match your search"
+              onOpenIntent={() => {
+                void dispatch(fetchAddProductCompanies());
+              }}
+            />
+            {/*
             <ChevronSelect
               value={formData.company}
               onChange={(e) => updateField("company", e.target.value)}
               onOpenIntent={() => {
-                void dispatch(fetchAddProductCompanyTypes());
+                void dispatch(fetchAddProductCompanies());
               }}
               className={selectField}
               iconClassName="right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
             >
               <option value="">Select company</option>
-              {addPanel.companyTypes.items.map((o) => (
+              {addPanel.companies.items.map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}
                 </option>
               ))}
             </ChevronSelect>
+            */}
           </div>
 
           <div className="grid grid-cols-3 gap-4">

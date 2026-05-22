@@ -213,7 +213,7 @@ export type AddPanelBrandsState = {
 
 /** Aggregated state for the Add Product side panel — each field has its own lazy fetch lifecycle. */
 export type ProductAddPanelState = {
-  companyTypes: AddPanelListField;
+  companies: AddPanelListField;
   rootCategories: AddPanelListField;
   categoryBundles: Record<string, AddPanelCategoryBundle>;
   subCategoryBundles: Record<string, AddPanelCategoryBundle>;

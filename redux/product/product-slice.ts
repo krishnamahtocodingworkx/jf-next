@@ -11,10 +11,10 @@ import {
 import {
     fetchProductCatalog,
     fetchProductDetail,
-    fetchAddProductCompanyTypes,
     fetchAddProductRootCategories,
     fetchAddProductCategoryBundle,
     fetchAddProductSubCategoryBundle,
+    fetchAddProductCompanies,
     fetchAddProductBrands,
     fetchAddProductManufacturersLazy,
     fetchAddProductCountriesLazy,
@@ -118,16 +118,16 @@ const productSlice = createSlice({
                 state.detail.status = "failed";
                 state.detail.data = undefined;
             })
-            // ── fetchAddProductCompanyTypes: lazy-loaded on first focus of the Add Product company select.
-            .addCase(fetchAddProductCompanyTypes.pending, (state) => {
-                state.addPanel.companyTypes.status = "loading";
+            // ── fetchAddProductCompanies: loaded on panel mount / first focus of the company select.
+            .addCase(fetchAddProductCompanies.pending, (state) => {
+                state.addPanel.companies.status = "loading";
             })
-            .addCase(fetchAddProductCompanyTypes.fulfilled, (state, action) => {
-                state.addPanel.companyTypes.status = "succeeded";
-                state.addPanel.companyTypes.items = action.payload;
+            .addCase(fetchAddProductCompanies.fulfilled, (state, action) => {
+                state.addPanel.companies.status = "succeeded";
+                state.addPanel.companies.items = action.payload;
             })
-            .addCase(fetchAddProductCompanyTypes.rejected, (state) => {
-                state.addPanel.companyTypes.status = "failed";
+            .addCase(fetchAddProductCompanies.rejected, (state) => {
+                state.addPanel.companies.status = "failed";
             })
             // ── fetchAddProductRootCategories: lazy-loaded on first focus of the category select.
             .addCase(fetchAddProductRootCategories.pending, (state) => {

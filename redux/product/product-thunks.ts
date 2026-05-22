@@ -88,7 +88,7 @@ type AddPanelRefRoot = {
     product: {
         addPanel: Pick<
             ProductAddPanelState,
-            | "companyTypes"
+            | "companies"
             | "rootCategories"
             | "categoryBundles"
             | "subCategoryBundles"
@@ -121,26 +121,6 @@ export const createAddProduct = createAsyncThunk<
         } catch (error) {
             return rejectWithApiToast(error, rejectWithValue);
         }
-    },
-);
-
-/** Loads company-type options the first time the Add Product company select is opened. */
-export const fetchAddProductCompanyTypes = createAsyncThunk<
-    SelectOption[],
-    void,
-    ProductApiThunkConfig
->(
-    "product/fetchAddProductCompanyTypes",
-    async (_, { rejectWithValue }) => {
-        try {
-            return await userService.getCompanyTypeList();
-        } catch (error) {
-            return rejectWithApiToast(error, rejectWithValue);
-        }
-    },
-    {
-        condition: (_, { getState }) =>
-            !isLoadOrLoaded(selectAddPanel(getState()).companyTypes.status),
     },
 );
 
@@ -214,6 +194,30 @@ export const fetchAddProductSubCategoryBundle = createAsyncThunk<
             const key = String(subCategory || "").trim();
             if (!key) return false;
             return !isLoadOrLoaded(selectAddPanel(getState()).subCategoryBundles[key]?.status);
+        },
+    },
+);
+
+/** Loads all companies for the Add Product company select (same pattern as brands). */
+export const fetchAddProductCompanies = createAsyncThunk<
+    SelectOption[],
+    void,
+    ProductApiThunkConfig
+>(
+    "product/fetchAddProductCompanies",
+    async (_, { rejectWithValue }) => {
+        try {
+            return await productService.getProductCompanyList();
+        } catch (error) {
+            return rejectWithApiToast(error, rejectWithValue);
+        }
+    },
+    {
+        condition: (_, { getState }) => {
+            const state = selectAddPanel(getState()).companies;
+            if (state.status === "loading") return false;
+            if (state.status === "succeeded" && state.items.length > 0) return false;
+            return true;
         },
     },
 );

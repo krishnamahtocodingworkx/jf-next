@@ -23,7 +23,9 @@ export const ENDPOINTS = {
     PERMISSIONS: `${API}/user/access-permissions`,
   },
   COMPANY: {
-    /** List companies for selects (Add Product), */
+    /** Paginated company directory for Add Product company select. */
+    GET_ALL: `${API}/company/get-all-company`,
+    /** List companies for selects (Ingredients add form). */
     LIST_FOR_SELECT: `${API}/companies/`,
   },
   PRODUCT_BRAND: {

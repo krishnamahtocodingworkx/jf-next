@@ -94,7 +94,7 @@ export const userService = {
     }
   },
 
-  /** Company-type options used by both Register and the Add Product company select. */
+  /** Company-type options for Register only (`companyType/company-type-list`). */
   async getCompanyTypeList(): Promise<SelectOption[]> {
     try {
       const { data } = await api.get(ENDPOINTS.PROFILE.COMPANY_TYPE);
