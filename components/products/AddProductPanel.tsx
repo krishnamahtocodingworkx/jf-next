@@ -322,14 +322,7 @@ export default function AddProductPanel({
             <label className={lbl}>Select Company</label>
             <ChevronSelect
               value={formData.company}
-              onChange={(e) => {
-                const v = e.target.value;
-                setFormData((prev) => ({
-                  ...prev,
-                  company: v,
-                  brand: prev.company === v ? prev.brand : "",
-                }));
-              }}
+              onChange={(e) => updateField("company", e.target.value)}
               onOpenIntent={() => {
                 void dispatch(fetchAddProductCompanyTypes());
               }}
@@ -451,7 +444,7 @@ export default function AddProductPanel({
                 type="text"
                 value={formData.sku}
                 onChange={(e) => updateField("sku", e.target.value)}
-                placeholder="0003003406461"
+                placeholder="TSH-BLK-M-001"
                 className={field}
               />
             </div>
@@ -469,17 +462,7 @@ export default function AddProductPanel({
               <label className={lbl}>Brand</label>
               <ChevronSelect
                 value={effectiveBrand}
-                onChange={(e) => {
-                  const brandId = e.target.value;
-                  const companyId = brandId
-                    ? (addPanel.brands.companyByBrandId[brandId] ?? "")
-                    : "";
-                  setFormData((prev) => ({
-                    ...prev,
-                    brand: brandId,
-                    company: brandId ? companyId : "",
-                  }));
-                }}
+                onChange={(e) => updateField("brand", e.target.value)}
                 onOpenIntent={() => {
                   void dispatch(fetchAddProductBrands());
                 }}
@@ -642,7 +625,7 @@ export default function AddProductPanel({
                 type="text"
                 value={formData.upcCode}
                 onChange={(e) => updateField("upcCode", e.target.value)}
-                placeholder="Enter UPC Code"
+                placeholder="012345678905"
                 className={fieldBlue}
               />
             </div>
