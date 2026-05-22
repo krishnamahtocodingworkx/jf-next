@@ -2,7 +2,7 @@
 
 // Side panel for creating a new product — lazy-loads its dropdowns, debounces the ingredient search,
 // validates the form, then POSTs via `createAddProduct` thunk. Parent owns mount lifecycle.
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { Package, Save, X } from "lucide-react";
 import { buildCreateProductPayload } from "@/utils/product-helpers";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
@@ -32,6 +32,7 @@ import {
   getAddProductFormValidationError,
   getAddProductIngredientSelectionError,
 } from "@/utils/schema";
+import { AsyncAutocomplete } from "@/components/common/AsyncAutocomplete";
 import { ChevronSelect } from "@/components/common/ChevronSelect";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -96,16 +97,29 @@ export default function AddProductPanel({
     }
   }
 
-  // Brand select value: keep formData.brand while options load; clear it if the id is missing from the list.
-  let effectiveBrand = "";
-  if (formData.brand) {
-    if (addPanel.brands.status !== "succeeded") {
-      effectiveBrand = formData.brand;
-    } else {
-      const ids = new Set(addPanel.brands.items.map((o) => o.value));
-      effectiveBrand = ids.has(formData.brand) ? formData.brand : "";
-    }
-  }
+  const resolveBrandLabel = useCallback(
+    (brandId: string) =>
+      addPanel.brands.items.find((o) => o.value === brandId)?.label,
+    [addPanel.brands.items],
+  );
+
+  const searchProductBrands = useCallback(
+    async (query: string) => {
+      let items = addPanel.brands.items;
+      if (addPanel.brands.status !== "succeeded") {
+        try {
+          const payload = await dispatch(fetchAddProductBrands()).unwrap();
+          items = payload.items;
+        } catch {
+          return [];
+        }
+      }
+      const q = query.trim().toLowerCase();
+      if (!q) return items.slice(0, 50);
+      return items.filter((o) => o.label.toLowerCase().includes(q));
+    },
+    [addPanel.brands.items, addPanel.brands.status, dispatch],
+  );
 
   // Reset Redux dropdown caches when the panel unmounts so the next open starts fresh.
   useEffect(() => {
@@ -459,7 +473,23 @@ export default function AddProductPanel({
               />
             </div>
             <div className="min-w-0">
-              <label className={lbl}>Brand</label>
+              <label className={lbl} htmlFor="add-product-brand">
+                Brand
+              </label>
+              <AsyncAutocomplete
+                id="add-product-brand"
+                aria-label="Product brand"
+                value={formData.brand}
+                onChange={(brandId) => updateField("brand", brandId)}
+                onSearch={searchProductBrands}
+                resolveLabel={resolveBrandLabel}
+                placeholder="Search brand…"
+                emptyMessage="No brands match your search"
+                onOpenIntent={() => {
+                  void dispatch(fetchAddProductBrands());
+                }}
+              />
+              {/* 
               <ChevronSelect
                 value={effectiveBrand}
                 onChange={(e) => updateField("brand", e.target.value)}
@@ -476,6 +506,7 @@ export default function AddProductPanel({
                   </option>
                 ))}
               </ChevronSelect>
+              */}
             </div>
           </div>
 
