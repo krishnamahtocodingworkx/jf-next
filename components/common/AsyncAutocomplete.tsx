@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-  type KeyboardEvent,
-} from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { X } from "lucide-react";
@@ -36,7 +29,7 @@ export type AsyncAutocompleteProps<
   "aria-label"?: string;
 };
 
-/** Generic async combobox — debounced `onSearch`, dropdown results, optional prefetch on focus. */
+/** Async combobox: type to search, pick from the list, clear with X. */
 export function AsyncAutocomplete<
   T extends AsyncAutocompleteOption = AsyncAutocompleteOption,
 >({
@@ -60,7 +53,7 @@ export function AsyncAutocomplete<
   const autoId = useId();
   const listboxId = `${idProp ?? autoId}-listbox`;
   const rootRef = useRef<HTMLDivElement>(null);
-  const searchGenRef = useRef(0);
+  const searchIdRef = useRef(0);
 
   const [inputText, setInputText] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -68,72 +61,51 @@ export function AsyncAutocomplete<
   const [loading, setLoading] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
 
-  const syncInputFromValue = useCallback(() => {
-    if (!value) {
-      setInputText("");
-      return;
-    }
-    const label = resolveLabel?.(value);
-    setInputText(label ?? "");
-  }, [value, resolveLabel]);
+  const selectedLabel = value ? (resolveLabel?.(value) ?? "") : "";
+  const query = inputText.trim();
+  const ready = isOpen && query.length >= minSearchLength;
+  const inputValue = isOpen ? inputText : selectedLabel;
 
+  // Debounced search while the dropdown is open
   useEffect(() => {
-    syncInputFromValue();
-  }, [syncInputFromValue]);
+    if (!ready) return;
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const q = inputText.trim();
-    if (q.length < minSearchLength) {
-      setOptions([]);
-      setLoading(false);
-      setActiveIndex(-1);
-      return;
-    }
-
-    const gen = ++searchGenRef.current;
-    setLoading(true);
+    const searchId = ++searchIdRef.current;
     const timer = setTimeout(() => {
       void (async () => {
         try {
-          const results = await onSearch(q);
-          if (searchGenRef.current !== gen) return;
+          const results = await onSearch(query);
+          if (searchIdRef.current !== searchId) return;
           setOptions(results);
           setActiveIndex(results.length > 0 ? 0 : -1);
-          console.log("[AsyncAutocomplete] search", {
-            q,
-            count: results.length,
-          });
-        } catch (err) {
-          if (searchGenRef.current !== gen) return;
+        } catch {
+          if (searchIdRef.current !== searchId) return;
           setOptions([]);
           setActiveIndex(-1);
-          console.log("[AsyncAutocomplete] search failed", err);
         } finally {
-          if (searchGenRef.current === gen) setLoading(false);
+          if (searchIdRef.current === searchId) setLoading(false);
         }
       })();
     }, debounceMs);
 
     return () => clearTimeout(timer);
-  }, [inputText, isOpen, minSearchLength, debounceMs, onSearch]);
+  }, [ready, query, debounceMs, onSearch]);
 
+  // Close when clicking outside
   useEffect(() => {
-    const onDocPointerDown = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) {
-        setIsOpen(false);
-        syncInputFromValue();
-      }
+    const onPointerDown = (e: PointerEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) setIsOpen(false);
     };
-    document.addEventListener("pointerdown", onDocPointerDown);
-    return () => document.removeEventListener("pointerdown", onDocPointerDown);
-  }, [syncInputFromValue]);
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, []);
 
-  const openAndPrefetch = () => {
+  const openDropdown = () => {
     if (disabled) return;
     onOpenIntent?.();
+    setInputText(selectedLabel);
     setIsOpen(true);
-    console.log("[AsyncAutocomplete] open");
+    if (selectedLabel.trim().length >= minSearchLength) setLoading(true);
   };
 
   const selectOption = (option: T) => {
@@ -142,6 +114,7 @@ export function AsyncAutocomplete<
     setIsOpen(false);
     setOptions([]);
     setActiveIndex(-1);
+    setLoading(false);
   };
 
   const clearSelection = () => {
@@ -150,18 +123,33 @@ export function AsyncAutocomplete<
     setOptions([]);
     setActiveIndex(-1);
     setIsOpen(false);
+    setLoading(false);
+  };
+
+  const onInputChange = (text: string) => {
+    setInputText(text);
+    if (!isOpen) setIsOpen(true);
+    onOpenIntent?.();
+
+    if (text.trim().length < minSearchLength) {
+      setOptions([]);
+      setActiveIndex(-1);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (!isOpen && (e.key === "ArrowDown" || e.key === "Enter")) {
-      openAndPrefetch();
+      openDropdown();
       return;
     }
     if (!isOpen) return;
+
     if (e.key === "Escape") {
       e.preventDefault();
       setIsOpen(false);
-      syncInputFromValue();
       return;
     }
     if (e.key === "ArrowDown") {
@@ -180,12 +168,7 @@ export function AsyncAutocomplete<
     }
   };
 
-  const showDropdown =
-    isOpen &&
-    !disabled &&
-    (loading ||
-      options.length > 0 ||
-      inputText.trim().length >= minSearchLength);
+  const showList = isOpen && !disabled && ready;
 
   return (
     <div ref={rootRef} className={twMerge(clsx("relative min-w-0", className))}>
@@ -209,13 +192,9 @@ export function AsyncAutocomplete<
           disabled={disabled}
           autoComplete="off"
           placeholder={placeholder}
-          value={inputText}
-          onChange={(e) => {
-            setInputText(e.target.value);
-            if (!isOpen) setIsOpen(true);
-            onOpenIntent?.();
-          }}
-          onFocus={() => openAndPrefetch()}
+          value={inputValue}
+          onChange={(e) => onInputChange(e.target.value)}
+          onFocus={openDropdown}
           onKeyDown={onKeyDown}
           className={twMerge(
             clsx(
@@ -225,7 +204,7 @@ export function AsyncAutocomplete<
             ),
           )}
         />
-        {(value || inputText.trim().length > 0) && !disabled ? (
+        {(value || inputValue.trim().length > 0) && !disabled ? (
           <button
             type="button"
             className="shrink-0 p-0.5"
@@ -237,15 +216,15 @@ export function AsyncAutocomplete<
         ) : null}
       </div>
 
-      {loading && isOpen ? (
+      {loading && isOpen && ready ? (
         <p className="mt-1 text-xs text-slate-500">{loadingMessage}</p>
       ) : null}
 
-      {showDropdown && !loading && options.length === 0 ? (
+      {showList && !loading && options.length === 0 ? (
         <p className="mt-1 text-xs text-slate-500">{emptyMessage}</p>
       ) : null}
 
-      {showDropdown && options.length > 0 ? (
+      {showList && options.length > 0 ? (
         <ul
           id={listboxId}
           role="listbox"
