@@ -2,7 +2,7 @@
 
 // Side panel for creating a new product — lazy-loads its dropdowns, debounces the ingredient search,
 // validates the form, then POSTs via `createAddProduct` thunk. Parent owns mount lifecycle.
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Package, Save, X } from "lucide-react";
 import { buildCreateProductPayload } from "@/utils/product-helpers";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
@@ -10,7 +10,7 @@ import {
   createAddProduct,
   fetchAddProductBrands,
   fetchAddProductCategoryBundle,
-  fetchAddProductCompanyTypes,
+  fetchAddProductCompanies,
   fetchAddProductCountriesLazy,
   fetchAddProductCurrenciesLazy,
   fetchAddProductManufacturersLazy,
@@ -32,6 +32,7 @@ import {
   getAddProductFormValidationError,
   getAddProductIngredientSelectionError,
 } from "@/utils/schema";
+import { AsyncAutocomplete } from "@/components/common/AsyncAutocomplete";
 import { ChevronSelect } from "@/components/common/ChevronSelect";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -63,6 +64,16 @@ const selectField = twMerge(
 const selectMuted = twMerge(clsx(selectField, "bg-slate-50"));
 const chk =
   "h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500";
+
+/** Client-side filter for Add Product AsyncAutocomplete fields (data prefetched via Redux). */
+function filterAddPanelOptions(
+  items: { value: string; label: string }[],
+  query: string,
+) {
+  const q = query.trim().toLowerCase();
+  if (!q) return items.slice(0, 50);
+  return items.filter((o) => o.label.toLowerCase().includes(q));
+}
 
 export default function AddProductPanel({
   onClose,
@@ -96,16 +107,21 @@ export default function AddProductPanel({
     }
   }
 
-  // Brand select value: keep formData.brand while options load; clear it if the id is missing from the list.
-  let effectiveBrand = "";
-  if (formData.brand) {
-    if (addPanel.brands.status !== "succeeded") {
-      effectiveBrand = formData.brand;
-    } else {
-      const ids = new Set(addPanel.brands.items.map((o) => o.value));
-      effectiveBrand = ids.has(formData.brand) ? formData.brand : "";
-    }
-  }
+  const resolveBrandLabel = (brandId: string) =>
+    addPanel.brands.items.find((o) => o.value === brandId)?.label;
+
+  const searchProductBrands = useCallback(
+    async (query: string) => filterAddPanelOptions(addPanel.brands.items, query),
+    [addPanel.brands.items],
+  );
+
+  const resolveCompanyLabel = (companyId: string) =>
+    addPanel.companies.items.find((o) => o.value === companyId)?.label;
+
+  const searchProductCompanies = useCallback(
+    async (query: string) => filterAddPanelOptions(addPanel.companies.items, query),
+    [addPanel.companies.items],
+  );
 
   // Reset Redux dropdown caches when the panel unmounts so the next open starts fresh.
   useEffect(() => {
@@ -114,9 +130,9 @@ export default function AddProductPanel({
     };
   }, [dispatch]);
 
-  // Start dropdown API calls as soon as the panel mounts so first click does not wait on the network.
-  useLayoutEffect(() => {
-    void dispatch(fetchAddProductCompanyTypes());
+  // Prefetch dropdown options on mount so the first open does not wait on the network.
+  useEffect(() => {
+    void dispatch(fetchAddProductCompanies());
     void dispatch(fetchAddProductRootCategories());
     void dispatch(fetchAddProductBrands());
     void dispatch(fetchAddProductManufacturersLazy());
@@ -205,6 +221,7 @@ export default function AddProductPanel({
         )?.label ?? "";
       const payload = buildCreateProductPayload(
         {
+          company: formData.company,
           name: formData.name,
           sku: formData.sku,
           flavor: formData.flavor,
@@ -319,30 +336,40 @@ export default function AddProductPanel({
           )}
 
           <div>
-            <label className={lbl}>Select Company</label>
+            <label className={lbl} htmlFor="add-product-company">
+              Select Company
+            </label>
+            <AsyncAutocomplete
+              id="add-product-company"
+              aria-label="Product company"
+              value={formData.company}
+              onChange={(companyId) => updateField("company", companyId)}
+              onSearch={searchProductCompanies}
+              resolveLabel={resolveCompanyLabel}
+              placeholder="Search company…"
+              emptyMessage="No companies match your search"
+              onOpenIntent={() => {
+                void dispatch(fetchAddProductCompanies());
+              }}
+            />
+            {/*
             <ChevronSelect
               value={formData.company}
-              onChange={(e) => {
-                const v = e.target.value;
-                setFormData((prev) => ({
-                  ...prev,
-                  company: v,
-                  brand: prev.company === v ? prev.brand : "",
-                }));
-              }}
+              onChange={(e) => updateField("company", e.target.value)}
               onOpenIntent={() => {
-                void dispatch(fetchAddProductCompanyTypes());
+                void dispatch(fetchAddProductCompanies());
               }}
               className={selectField}
               iconClassName="right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
             >
               <option value="">Select company</option>
-              {addPanel.companyTypes.items.map((o) => (
+              {addPanel.companies.items.map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}
                 </option>
               ))}
             </ChevronSelect>
+            */}
           </div>
 
           <div className="grid grid-cols-3 gap-4">
@@ -451,7 +478,7 @@ export default function AddProductPanel({
                 type="text"
                 value={formData.sku}
                 onChange={(e) => updateField("sku", e.target.value)}
-                placeholder="0003003406461"
+                placeholder="TSH-BLK-M-001"
                 className={field}
               />
             </div>
@@ -466,20 +493,26 @@ export default function AddProductPanel({
               />
             </div>
             <div className="min-w-0">
-              <label className={lbl}>Brand</label>
+              <label className={lbl} htmlFor="add-product-brand">
+                Brand
+              </label>
+              <AsyncAutocomplete
+                id="add-product-brand"
+                aria-label="Product brand"
+                value={formData.brand}
+                onChange={(brandId) => updateField("brand", brandId)}
+                onSearch={searchProductBrands}
+                resolveLabel={resolveBrandLabel}
+                placeholder="Search brand…"
+                emptyMessage="No brands match your search"
+                onOpenIntent={() => {
+                  void dispatch(fetchAddProductBrands());
+                }}
+              />
+              {/* 
               <ChevronSelect
                 value={effectiveBrand}
-                onChange={(e) => {
-                  const brandId = e.target.value;
-                  const companyId = brandId
-                    ? (addPanel.brands.companyByBrandId[brandId] ?? "")
-                    : "";
-                  setFormData((prev) => ({
-                    ...prev,
-                    brand: brandId,
-                    company: brandId ? companyId : "",
-                  }));
-                }}
+                onChange={(e) => updateField("brand", e.target.value)}
                 onOpenIntent={() => {
                   void dispatch(fetchAddProductBrands());
                 }}
@@ -493,6 +526,7 @@ export default function AddProductPanel({
                   </option>
                 ))}
               </ChevronSelect>
+              */}
             </div>
           </div>
 
@@ -642,7 +676,7 @@ export default function AddProductPanel({
                 type="text"
                 value={formData.upcCode}
                 onChange={(e) => updateField("upcCode", e.target.value)}
-                placeholder="Enter UPC Code"
+                placeholder="012345678905"
                 className={fieldBlue}
               />
             </div>

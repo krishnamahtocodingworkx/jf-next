@@ -94,10 +94,12 @@ export function buildCreateProductPayload(
     };
   });
 
+  const companyId = String(values.company ?? "").trim();
   const payload: Record<string, unknown> = {
     name: String(values.name || "").trim(),
     ingredients,
     newIngredients,
+    company: companyId,
     manufacturerName: String(values.manufacturerName ?? "").trim(),
     sku: String(values.sku || "").trim(),
     flavour: String(values.flavour ?? values.flavor ?? "").trim(),
@@ -409,7 +411,7 @@ export const emptyAddPanelBrandsState = (): AddPanelBrandsState => ({
 
 /** Builds the full add-panel slice with every field in `idle`. */
 export const createInitialAddPanelState = (): ProductAddPanelState => ({
-  companyTypes: emptyAddPanelListField(),
+  companies: emptyAddPanelListField(),
   rootCategories: emptyAddPanelListField(),
   categoryBundles: {},
   subCategoryBundles: {},

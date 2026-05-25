@@ -130,6 +130,17 @@ export const productService = {
         }
     },
 
+    /** All companies for the Add Product company select (`company/get-all-company`). */
+    async getProductCompanyList(): Promise<SelectOption[]> {
+        try {
+            const { data } = await api.get(ENDPOINTS.COMPANY.GET_ALL);
+            const rows = unwrapApiListData(unwrapApiEnvelope(data));
+            return normalizeEntitySelectOptions(rows);
+        } catch (error) {
+            throw error;
+        }
+    },
+
     /** Create — used by the Add Product panel; toasts are handled in `createAddProduct` thunk. */
     async addProduct(payload: Record<string, unknown>): Promise<unknown> {
         const { data } = await api.post(ENDPOINTS.PRODUCTS.CREATE_PRODUCT, payload);
