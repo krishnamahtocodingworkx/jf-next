@@ -94,10 +94,12 @@ export function buildCreateProductPayload(
     };
   });
 
+  const companyId = String(values.company ?? "").trim();
   const payload: Record<string, unknown> = {
     name: String(values.name || "").trim(),
     ingredients,
     newIngredients,
+    company: companyId,
     manufacturerName: String(values.manufacturerName ?? "").trim(),
     sku: String(values.sku || "").trim(),
     flavour: String(values.flavour ?? values.flavor ?? "").trim(),

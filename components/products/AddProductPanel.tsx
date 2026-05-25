@@ -221,6 +221,7 @@ export default function AddProductPanel({
         )?.label ?? "";
       const payload = buildCreateProductPayload(
         {
+          company: formData.company,
           name: formData.name,
           sku: formData.sku,
           flavor: formData.flavor,
