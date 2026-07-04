@@ -111,7 +111,8 @@ export default function AddProductPanel({
     addPanel.brands.items.find((o) => o.value === brandId)?.label;
 
   const searchProductBrands = useCallback(
-    async (query: string) => filterAddPanelOptions(addPanel.brands.items, query),
+    async (query: string) =>
+      filterAddPanelOptions(addPanel.brands.items, query),
     [addPanel.brands.items],
   );
 
@@ -119,7 +120,8 @@ export default function AddProductPanel({
     addPanel.companies.items.find((o) => o.value === companyId)?.label;
 
   const searchProductCompanies = useCallback(
-    async (query: string) => filterAddPanelOptions(addPanel.companies.items, query),
+    async (query: string) =>
+      filterAddPanelOptions(addPanel.companies.items, query),
     [addPanel.companies.items],
   );
 
@@ -221,7 +223,7 @@ export default function AddProductPanel({
         )?.label ?? "";
       const payload = buildCreateProductPayload(
         {
-          company: formData.company,
+          // company: formData.company, 
           name: formData.name,
           sku: formData.sku,
           flavor: formData.flavor,
